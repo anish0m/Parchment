@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+mediafiles/
+media/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Docker
+*.pid
+
+# ML / model artifacts
+*.pkl
+*.joblib
+/models/
+.cache/
+huggingface/
+
+# Node (if used for Tailwind/asset tooling)
+node_modules/
+npm-debug.log*
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
