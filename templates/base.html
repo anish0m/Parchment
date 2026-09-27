@@ -1,0 +1,38 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Parchment{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="brand" href="{% url 'home' %}">Parchment</a>
+      <div class="nav-links">
+        {% if user.is_authenticated %}
+          <span class="muted">{{ user.get_username }}</span>
+          {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <ul class="messages" x-data="{ open: true }" x-show="open">
+        {% for message in messages %}
+          <li class="message message-{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+        <button type="button" class="link" @click="open = false">Dismiss</button>
+      </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-parchment}
+      POSTGRES_USER: ${POSTGRES_USER:-parchment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parchment}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements-dev.txt
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: parchment.settings.dev
+      DJANGO_MEDIA_ROOT: /app/media
+      DJANGO_COLLECTSTATIC: "0"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_data:

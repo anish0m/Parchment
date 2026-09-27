@@ -31,6 +31,74 @@ Parchment allows users to organize study materials by course, upload content as 
 - `Flashcard` — a generated question/answer pair, tied to a course and source material, with a Leitner box level
 - `ReviewLog` — a record of each study attempt (correct/incorrect) used to drive spaced repetition
 
+## Getting started
+
+### With Docker (recommended)
+
+Requires Docker with Compose v2.
+
+```bash
+cp .env.example .env          # then set DJANGO_SECRET_KEY
+docker compose up --build
+```
+
+The app is at http://localhost:8000. Migrations run automatically when the container starts. To create an admin user:
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+The dev container mounts the source tree and uses Django's auto-reloading `runserver`. PostgreSQL data and uploaded files are kept in the `postgres_data` and `media_data` volumes.
+
+### Without Docker
+
+Requires Python 3.11+ and a running PostgreSQL.
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env          # point DATABASE_URL at your Postgres (host localhost, not db)
+python manage.py migrate
+python manage.py runserver
+```
+
+### Development workflow
+
+```bash
+pytest                        # run the test suite
+ruff check . && ruff format . # lint and format
+pre-commit install            # run lint/format on every commit
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `check --deploy`, and the tests against PostgreSQL.
+
+### Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `parchment/settings/` | `base.py` (shared, reads env vars), `dev.py`, `test.py`, `prod.py` |
+| `accounts/` | Users and authentication |
+| `courses/` | `Course` model and course pages |
+| `materials/` | Uploads and PDF text extraction |
+| `flashcards/` | `Flashcard` model and the generation pipeline |
+| `study/` | Spaced repetition, review logs and study sessions |
+| `templates/` | Shared templates; `base.html` loads HTMX and Alpine.js |
+| `static/` | CSS and other static assets |
+| `docker/entrypoint.sh` | Runs migrations (and `collectstatic` outside dev) before starting the server |
+
+### Configuration
+
+All settings come from environment variables (see `.env.example`):
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `DJANGO_SECRET_KEY` | — | Required |
+| `DATABASE_URL` | — | Required, e.g. `postgres://user:pass@host:5432/db` |
+| `DJANGO_DEBUG` | `True` in dev, `False` in prod | |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1,0.0.0.0` in dev | Comma-separated |
+| `DJANGO_SETTINGS_MODULE` | `parchment.settings.dev` via `manage.py`, `.prod` in the Docker image | |
+| `DJANGO_MEDIA_ROOT` | `./media` | Where uploaded PDFs are stored |
+
 ## License
 
 MIT
