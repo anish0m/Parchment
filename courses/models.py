@@ -14,7 +14,7 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = [Lower("name")]
         constraints = [
             models.UniqueConstraint("owner", Lower("name"), name="unique_course_name_per_owner"),
         ]

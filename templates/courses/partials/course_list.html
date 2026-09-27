@@ -1,7 +1,10 @@
-<ul id="course-list" class="course-grid"{% if oob %} hx-swap-oob="true"{% endif %}>
-  {% for course in courses %}
-    {% include "courses/partials/course_card.html" %}
-  {% empty %}
-    <li class="empty-state">No courses yet. Create your first one above.</li>
-  {% endfor %}
-</ul>
+<div id="course-list" class="list-region"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <ul class="course-grid">
+    {% for course in courses %}
+      {% include "courses/partials/course_card.html" %}
+    {% empty %}
+      <li class="empty-state">No courses yet. Create your first one above.</li>
+    {% endfor %}
+  </ul>
+  {% include "partials/pagination.html" with target="course-list" %}
+</div>

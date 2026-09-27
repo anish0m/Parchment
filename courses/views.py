@@ -1,16 +1,18 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Value
+from django.db.models.functions import Lower
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
+from parchment.htmx import is_htmx, paginate, wants_fragment
+
 from .forms import CourseForm
 from .models import Course
 
-
-def is_htmx(request):
-    return request.headers.get("HX-Request") == "true"
+COURSES_PER_PAGE = 24
 
 
 class OwnedCourseMixin(LoginRequiredMixin):
@@ -31,9 +33,26 @@ class CourseFormMixin:
         return kwargs
 
 
+def course_list_context(queryset, page_number):
+    page_obj = paginate(queryset, page_number, COURSES_PER_PAGE)
+    return {"courses": page_obj.object_list, "page_obj": page_obj}
+
+
 class CourseListView(OwnedCourseMixin, ListView):
     template_name = "courses/course_list.html"
     context_object_name = "courses"
+    paginate_by = COURSES_PER_PAGE
+
+    def get_template_names(self):
+        if wants_fragment(self.request, "course-list"):
+            return ["courses/partials/course_list.html"]
+        return [self.template_name]
+
+    def paginate_queryset(self, queryset, page_size):
+        # Out-of-range pages (e.g. after deleting the last course on a page) show
+        # the last page instead of a 404.
+        page = paginate(queryset, self.request.GET.get("page"), page_size)
+        return page.paginator, page, page.object_list, page.has_other_pages()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -47,13 +66,20 @@ class CourseCreateView(OwnedCourseMixin, CourseFormMixin, CreateView):
     def form_valid(self, form):
         self.object = form.save()
         if is_htmx(self.request):
-            # Return a blank form and refresh the list out of band.
+            # Return a blank form and refresh the list out of band, on the page
+            # where the new course sits in alphabetical order.
+            courses = self.get_queryset()
+            before = (
+                courses.annotate(lower_name=Lower("name"))
+                .filter(lower_name__lt=Lower(Value(self.object.name)))
+                .count()
+            )
             return render(
                 self.request,
                 "courses/partials/course_created.html",
                 {
                     "form": CourseForm(owner=self.request.user),
-                    "courses": self.get_queryset(),
+                    **course_list_context(courses, before // COURSES_PER_PAGE + 1),
                 },
             )
         messages.success(self.request, f"Created “{self.object.name}”.")
@@ -88,10 +114,11 @@ class CourseDeleteView(OwnedCourseMixin, DeleteView):
         name = self.object.name
         self.object.delete()
         if is_htmx(self.request):
+            # Re-render the page the user was on; if it's now empty, the last page.
             return render(
                 self.request,
                 "courses/partials/course_list.html",
-                {"courses": self.get_queryset()},
+                course_list_context(self.get_queryset(), self.request.POST.get("page")),
             )
         messages.success(self.request, f"Deleted “{name}”.")
         return redirect(self.success_url)

@@ -12,6 +12,7 @@
           hx-target="#course-list" hx-swap="outerHTML"
           hx-confirm="Delete “{{ course.name }}” and everything in it?">
       {% csrf_token %}
+      <input type="hidden" name="page" value="{{ page_obj.number|default:1 }}">
       <button type="submit" class="link danger">Delete</button>
     </form>
   </div>

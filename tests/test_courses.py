@@ -3,6 +3,7 @@ from django.db import IntegrityError
 from django.urls import reverse
 
 from courses.models import Course
+from courses.views import COURSES_PER_PAGE as PER_PAGE
 
 from .conftest import HTMX
 
@@ -165,3 +166,100 @@ def test_other_users_course_is_not_found(auth_client, other_user, make_course, n
     assert response.status_code == 404
     course.refresh_from_db()
     assert course.name == "Private"
+
+
+def make_many(make_course, owner, count):
+    # Zero-padded so alphabetical order matches creation order.
+    return [make_course(owner, f"Course {i:03}") for i in range(count)]
+
+
+def test_list_is_paginated(auth_client, user, make_course):
+    make_many(make_course, user, PER_PAGE + 1)
+
+    first = auth_client.get(reverse("courses:list"))
+    second = auth_client.get(reverse("courses:list"), {"page": 2})
+
+    assert len(first.context["courses"]) == PER_PAGE
+    assert [c.name for c in second.context["courses"]] == [f"Course {PER_PAGE:03}"]
+    assert 'aria-label="Pages"' in first.content.decode()
+
+
+def test_no_page_links_when_everything_fits(auth_client, user, make_course):
+    make_course(user)
+
+    response = auth_client.get(reverse("courses:list"))
+
+    assert 'aria-label="Pages"' not in response.content.decode()
+
+
+def test_out_of_range_page_shows_last_page(auth_client, user, make_course):
+    make_many(make_course, user, PER_PAGE + 1)
+
+    response = auth_client.get(reverse("courses:list"), {"page": 99})
+
+    assert response.status_code == 200
+    assert response.context["page_obj"].number == 2
+
+
+def test_list_ordering_ignores_case(auth_client, user, make_course):
+    for name in ["banana", "Apple", "cherry"]:
+        make_course(user, name)
+
+    response = auth_client.get(reverse("courses:list"))
+
+    assert [c.name for c in response.context["courses"]] == ["Apple", "banana", "cherry"]
+
+
+def test_htmx_page_link_returns_only_the_list(auth_client, user, make_course):
+    make_many(make_course, user, PER_PAGE + 1)
+
+    response = auth_client.get(
+        reverse("courses:list"), {"page": 2}, HTTP_HX_TARGET="course-list", **HTMX
+    )
+
+    content = response.content.decode()
+    assert content.lstrip().startswith('<div id="course-list"')
+    assert "<html" not in content
+
+
+def test_htmx_history_restore_gets_full_page(auth_client, user, make_course):
+    response = auth_client.get(
+        reverse("courses:list"),
+        HTTP_HX_TARGET="course-list",
+        HTTP_HX_HISTORY_RESTORE_REQUEST="true",
+        **HTMX,
+    )
+
+    assert "<html" in response.content.decode()
+
+
+def test_htmx_create_shows_the_page_with_the_new_course(auth_client, user, make_course):
+    make_many(make_course, user, PER_PAGE)
+
+    response = auth_client.post(reverse("courses:create"), {"name": "Zoology"}, **HTMX)
+
+    assert response.context["page_obj"].number == 2
+    assert "Zoology" in response.content.decode()
+
+
+def test_htmx_delete_stays_on_the_current_page(auth_client, user, make_course):
+    courses = make_many(make_course, user, PER_PAGE + 2)
+
+    response = auth_client.post(
+        reverse("courses:delete", args=[courses[-1].pk]), {"page": 2}, **HTMX
+    )
+
+    assert response.context["page_obj"].number == 2
+    assert [c.name for c in response.context["courses"]] == [courses[-2].name]
+
+
+def test_htmx_delete_of_last_item_on_page_falls_back_to_previous_page(
+    auth_client, user, make_course
+):
+    courses = make_many(make_course, user, PER_PAGE + 1)
+
+    response = auth_client.post(
+        reverse("courses:delete", args=[courses[-1].pk]), {"page": 2}, **HTMX
+    )
+
+    assert response.context["page_obj"].number == 1
