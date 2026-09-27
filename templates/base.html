@@ -15,8 +15,21 @@
       <a class="brand" href="{% url 'home' %}">Parchment</a>
       <div class="nav-links">
         {% if user.is_authenticated %}
-          <span class="muted">{{ user.get_username }}</span>
+          <a href="{% url 'courses:list' %}">Courses</a>
           {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+          <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+            <button type="button" class="link" @click="open = !open" :aria-expanded="open"><span class="nav-user">{{ user.get_username }}</span> ▾</button>
+            <div class="dropdown-menu" x-show="open" x-cloak>
+              <a href="{% url 'password_change' %}">Change password</a>
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="link">Log out</button>
+              </form>
+            </div>
+          </div>
+        {% else %}
+          <a href="{% url 'login' %}">Log in</a>
+          <a class="button" href="{% url 'signup' %}">Sign up</a>
         {% endif %}
       </div>
     </nav>

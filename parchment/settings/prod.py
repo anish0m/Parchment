@@ -13,4 +13,5 @@ SECURE_HSTS_SECONDS = env.int("DJANGO_SECURE_HSTS_SECONDS", default=0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+# Used for password reset emails, e.g. smtp+tls://user:password@smtp.example.com:587
+vars().update(env.email_url("EMAIL_URL", default="smtp://localhost:25"))

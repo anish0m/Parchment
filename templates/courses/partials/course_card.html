@@ -1,0 +1,18 @@
+<li class="course-card" id="course-{{ course.pk }}">
+  <h2 class="course-name"><a href="{{ course.get_absolute_url }}">{{ course.name }}</a></h2>
+  {% if course.description %}
+    <p class="course-description">{{ course.description|truncatewords:25 }}</p>
+  {% endif %}
+  {# Card counts and "due today" are added once flashcards exist (Phases 3 and 5). #}
+  <p class="muted small">Created {{ course.created_at|date:"M j, Y" }}</p>
+  <div class="card-actions">
+    <a href="{% url 'courses:update' course.pk %}">Edit</a>
+    <form method="post" action="{% url 'courses:delete' course.pk %}"
+          hx-post="{% url 'courses:delete' course.pk %}"
+          hx-target="#course-list" hx-swap="outerHTML"
+          hx-confirm="Delete “{{ course.name }}” and everything in it?">
+      {% csrf_token %}
+      <button type="submit" class="link danger">Delete</button>
+    </form>
+  </div>
+</li>

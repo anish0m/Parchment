@@ -1,0 +1,13 @@
+{% extends "registration/_auth_page.html" %}
+
+{% block title %}Sign up · Parchment{% endblock %}
+{% block heading %}Create your account{% endblock %}
+
+{% block body %}
+  <form method="post" class="form">
+    {% csrf_token %}
+    {{ form.as_div }}
+    <button type="submit" class="button">Sign up</button>
+  </form>
+  <p class="muted">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}

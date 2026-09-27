@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{% url 'courses:list' %}">← All courses</a></p>
+
+  <div class="page-header">
+    <h1>{{ course.name }}</h1>
+    <div class="actions">
+      <a class="button secondary" href="{% url 'courses:update' course.pk %}">Edit</a>
+      <a class="button danger" href="{% url 'courses:delete' course.pk %}">Delete</a>
+    </div>
+  </div>
+
+  {% if course.description %}
+    <p>{{ course.description|linebreaksbr }}</p>
+  {% endif %}
+
+  <section class="panel">
+    <h2 class="panel-title">Materials</h2>
+    <p class="muted">No materials yet.</p>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Flashcards</h2>
+    <p class="muted">No flashcards yet.</p>
+  </section>
+{% endblock %}

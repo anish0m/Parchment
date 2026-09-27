@@ -1,0 +1,7 @@
+<form id="course-form" class="form" method="post"
+      action="{% url 'courses:create' %}"
+      hx-post="{% url 'courses:create' %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  {{ form.as_div }}
+  <button type="submit" class="button">Create course</button>
+</form>

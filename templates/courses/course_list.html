@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Your courses · Parchment{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Your courses</h1>
+  </div>
+
+  <section class="panel">
+    <h2 class="panel-title">New course</h2>
+    {% include "courses/partials/course_form.html" %}
+  </section>
+
+  {% include "courses/partials/course_list.html" %}
+{% endblock %}

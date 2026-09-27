@@ -95,6 +95,13 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "courses:list"
+LOGOUT_REDIRECT_URL = "home"
+
+DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="Parchment <noreply@localhost>")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
