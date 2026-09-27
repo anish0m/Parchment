@@ -3,3 +3,4 @@ pytest>=8,<10
 pytest-django>=4.9,<5
 ruff>=0.15,<0.17
 pre-commit>=4,<5
+pypdf>=5,<7  # builds password-protected PDFs for tests

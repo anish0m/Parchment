@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.humanize",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "rest_framework",
@@ -87,6 +88,11 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = env.path("DJANGO_MEDIA_ROOT", default=BASE_DIR / "media")
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+
+# Limits for uploaded study materials.
+MATERIAL_MAX_UPLOAD_MB = env.int("MATERIAL_MAX_UPLOAD_MB", default=20)
+MATERIAL_MAX_PDF_PAGES = env.int("MATERIAL_MAX_PDF_PAGES", default=300)
+MATERIAL_MAX_TEXT_CHARS = env.int("MATERIAL_MAX_TEXT_CHARS", default=300_000)
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

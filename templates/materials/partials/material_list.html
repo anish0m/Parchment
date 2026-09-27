@@ -1,0 +1,10 @@
+<div id="material-list" class="list-region">
+  <ul class="material-list">
+    {% for material in materials %}
+      {% include "materials/partials/material_row.html" %}
+    {% empty %}
+      <li class="empty-state">No materials yet. Add notes as pasted text or a PDF.</li>
+    {% endfor %}
+  </ul>
+  {% include "partials/pagination.html" with target="material-list" %}
+</div>

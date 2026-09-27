@@ -18,8 +18,11 @@
   {% endif %}
 
   <section class="panel">
-    <h2 class="panel-title">Materials</h2>
-    <p class="muted">No materials yet.</p>
+    <div class="panel-header">
+      <h2 class="panel-title">Materials</h2>
+      <a class="button" href="{% url 'materials:create' course.pk %}">Add material</a>
+    </div>
+    {% include "materials/partials/material_list.html" %}
   </section>
 
   <section class="panel">

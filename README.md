@@ -86,6 +86,17 @@ CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `chec
 | `static/` | CSS and other static assets |
 | `docker/entrypoint.sh` | Runs migrations (and `collectstatic` outside dev) before starting the server |
 
+### How text is extracted from PDFs
+
+`materials/extraction.py` reads each page with pdfplumber, then `materials/text_cleaning.py` tidies the result:
+
+- Running headers/footers (lines repeated at the top or bottom of most pages) and page numbers are removed.
+- Lines wrapped at the page margin are joined back into paragraphs, words hyphenated across lines are rejoined, and list items stay on their own lines.
+- Two-column pages (common in papers) are read one column at a time, with any full-width title block first.
+- Scanned PDFs with no text layer, password-protected PDFs and damaged files are saved as **Failed** with a message explaining why.
+
+Extraction currently runs during the upload request; it moves to a background worker in Phase 4.
+
 ### Configuration
 
 All settings come from environment variables (see `.env.example`):
@@ -97,7 +108,11 @@ All settings come from environment variables (see `.env.example`):
 | `DJANGO_DEBUG` | `True` in dev, `False` in prod | |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1,0.0.0.0` in dev | Comma-separated |
 | `DJANGO_SETTINGS_MODULE` | `parchment.settings.dev` via `manage.py`, `.prod` in the Docker image | |
-| `DJANGO_MEDIA_ROOT` | `./media` | Where uploaded PDFs are stored |
+| `DJANGO_MEDIA_ROOT` | `./media` | Where uploaded PDFs are stored. Not served publicly: each PDF is served to its owner through the app |
+| `MATERIAL_MAX_UPLOAD_MB` | `20` | Largest PDF that can be uploaded |
+| `MATERIAL_MAX_PDF_PAGES` | `300` | Most pages a PDF can have |
+| `MATERIAL_MAX_TEXT_CHARS` | `300000` | Longest pasted text |
+| `EMAIL_URL` | `smtp://localhost:25` (prod) | Outgoing mail for password resets, e.g. `smtp+tls://user:pass@host:587`. Dev prints emails to the console |
 
 ## License
 

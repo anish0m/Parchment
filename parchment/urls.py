@@ -1,17 +1,15 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
 from . import views
 
+# Uploaded files (MEDIA_ROOT) are deliberately not served at a public URL;
+# materials.views.MaterialFileView serves each PDF to its owner only.
 urlpatterns = [
     path("", views.home, name="home"),
     path("healthz/", views.healthz, name="healthz"),
     path("accounts/", include("accounts.urls")),
     path("courses/", include("courses.urls")),
+    path("", include("materials.urls")),
     path("admin/", admin.site.urls),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

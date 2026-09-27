@@ -159,3 +159,44 @@ button.link { font: inherit; }
 .page-numbers a, .page-numbers span { min-width: 2em; padding: 2px 6px; text-align: center; border-radius: 4px; }
 .page-numbers .current { background: var(--accent); color: var(--bg); font-weight: 600; }
 .list-region.htmx-request { opacity: 0.6; transition: opacity 0.15s; }
+
+/* Materials */
+.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.panel-header .panel-title { margin: 0; }
+.panel-error { border-color: var(--error); }
+.error-text { color: var(--error); }
+.form-wide { max-width: 720px; }
+.form input[type="file"] { max-width: 100%; }
+.choice-group { border: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.choice-group legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.choice { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; cursor: pointer; }
+.button:disabled { opacity: 0.7; cursor: progress; }
+
+.material-list { list-style: none; margin: 0; padding: 0; }
+.material-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.material-row:first-child { border-top: none; }
+.material-main { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.material-title { font-weight: 600; min-width: 0; }
+.material-meta { grid-column: 1; margin: 0; }
+.material-row form { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+.status-ready { border-color: var(--success); color: var(--success); }
+.status-failed { border-color: var(--error); color: var(--error); }
+.status-pending, .status-processing { border-color: var(--accent); color: var(--accent); }
+
+.facts { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 16px 0; }
+.facts div { min-width: 0; }
+.facts dt { color: var(--muted); font-size: 0.85rem; }
+.facts dd { margin: 0; }
+
+/* Long extracted text scrolls inside its panel instead of making the page very long. */
+.text-preview { max-height: 70vh; overflow-y: auto; padding-right: 8px; }
+.text-preview p:first-child { margin-top: 0; }

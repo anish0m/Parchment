@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Value
+from django.db.models import Count, Value
 from django.db.models.functions import Lower
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
+from materials.views import material_list_context
 from parchment.htmx import is_htmx, paginate, wants_fragment
 
 from .forms import CourseForm
@@ -33,8 +34,13 @@ class CourseFormMixin:
         return kwargs
 
 
+def with_counts(queryset):
+    # Aggregating drops the model's default ordering, so order explicitly.
+    return queryset.annotate(material_count=Count("materials")).order_by(Lower("name"))
+
+
 def course_list_context(queryset, page_number):
-    page_obj = paginate(queryset, page_number, COURSES_PER_PAGE)
+    page_obj = paginate(with_counts(queryset), page_number, COURSES_PER_PAGE)
     return {"courses": page_obj.object_list, "page_obj": page_obj}
 
 
@@ -42,6 +48,9 @@ class CourseListView(OwnedCourseMixin, ListView):
     template_name = "courses/course_list.html"
     context_object_name = "courses"
     paginate_by = COURSES_PER_PAGE
+
+    def get_queryset(self):
+        return with_counts(super().get_queryset())
 
     def get_template_names(self):
         if wants_fragment(self.request, "course-list"):
@@ -94,6 +103,16 @@ class CourseCreateView(OwnedCourseMixin, CourseFormMixin, CreateView):
 class CourseDetailView(OwnedCourseMixin, DetailView):
     template_name = "courses/course_detail.html"
     context_object_name = "course"
+
+    def get_template_names(self):
+        if wants_fragment(self.request, "material-list"):
+            return ["materials/partials/material_list.html"]
+        return [self.template_name]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(material_list_context(self.object, self.request.GET.get("page")))
+        return context
 
 
 class CourseUpdateView(OwnedCourseMixin, CourseFormMixin, UpdateView):

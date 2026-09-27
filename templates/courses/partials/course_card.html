@@ -4,7 +4,9 @@
     <p class="course-description">{{ course.description|truncatewords:25 }}</p>
   {% endif %}
   {# Card counts and "due today" are added once flashcards exist (Phases 3 and 5). #}
-  <p class="muted small">Created {{ course.created_at|date:"M j, Y" }}</p>
+  <p class="muted small">
+    {{ course.material_count }} material{{ course.material_count|pluralize }} · Created {{ course.created_at|date:"M j, Y" }}
+  </p>
   <div class="card-actions">
     <a href="{% url 'courses:update' course.pk %}">Edit</a>
     <form method="post" action="{% url 'courses:delete' course.pk %}"

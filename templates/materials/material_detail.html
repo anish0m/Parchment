@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ material.title }} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{{ material.course.get_absolute_url }}">← {{ material.course.name }}</a></p>
+
+  <div class="page-header">
+    <h1>{{ material.title }}</h1>
+    <div class="actions">
+      <a class="button danger" href="{% url 'materials:delete' material.pk %}">Delete</a>
+    </div>
+  </div>
+
+  <div class="badges">
+    <span class="badge">{{ material.get_source_type_display }}</span>
+    {% include "materials/partials/status_badge.html" %}
+  </div>
+
+  <dl class="facts">
+    {% if material.is_pdf %}
+      <div><dt>File</dt><dd><a href="{% url 'materials:file' material.pk %}" target="_blank" rel="noopener">{{ material.original_filename|default:"Original PDF" }}</a></dd></div>
+      {% if material.page_count %}<div><dt>Pages</dt><dd>{{ material.page_count }}</dd></div>{% endif %}
+    {% endif %}
+    {% if material.status == "ready" %}<div><dt>Words</dt><dd>{{ material.word_count|intcomma }}</dd></div>{% endif %}
+    <div><dt>Added</dt><dd>{{ material.created_at|date:"M j, Y, H:i" }}</dd></div>
+  </dl>
+
+  {% if material.status == "failed" %}
+    <section class="panel panel-error" role="alert">
+      <h2 class="panel-title">We couldn't read this material</h2>
+      <p>{{ material.error_message }}</p>
+      <p><a href="{% url 'materials:create' material.course.pk %}">Add it again</a> as pasted text or a different PDF.</p>
+    </section>
+  {% elif material.status == "ready" %}
+    <section class="panel">
+      <h2 class="panel-title">Extracted text</h2>
+      <div class="text-preview" tabindex="0" aria-label="Extracted text">{{ material.raw_text|linebreaks }}</div>
+    </section>
+  {% else %}
+    <p class="muted">This material is still being processed.</p>
+  {% endif %}
+{% endblock %}

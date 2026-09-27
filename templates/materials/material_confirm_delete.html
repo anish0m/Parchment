@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ material.title }} · Parchment{% endblock %}
+
+{% block content %}
+  <h1>Delete “{{ material.title }}”?</h1>
+  <p>This permanently deletes the material{% if material.is_pdf %} and its PDF{% endif %}. It can't be undone.</p>
+  <form method="post" class="actions">
+    {% csrf_token %}
+    <button type="submit" class="button danger">Delete material</button>
+    <a href="{{ material.get_absolute_url }}">Cancel</a>
+  </form>
+{% endblock %}
