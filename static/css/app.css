@@ -24,12 +24,17 @@
 
 * { box-sizing: border-box; }
 
+/* Keep the layout from shifting sideways when HTMX makes the page taller or shorter. */
+html { scrollbar-gutter: stable; }
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  /* Long unbroken strings (URLs, pasted text) wrap instead of widening the page. */
+  overflow-wrap: anywhere;
 }
 
 a { color: var(--accent); }
@@ -40,6 +45,12 @@ a { color: var(--accent); }
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
 .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--text); }
 .nav-links { display: flex; gap: 16px; align-items: center; min-width: 0; }
+.nav a, .nav button { white-space: nowrap; overflow-wrap: normal; }
+.brand { flex-shrink: 0; }
+@media (max-width: 380px) {
+  .nav-links { gap: 12px; }
+  .nav-user { max-width: 7ch; }
+}
 .nav-user { display: inline-block; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
 .muted { color: var(--muted); }
@@ -59,6 +70,7 @@ h1 { margin: 24px 0 16px; }
 .breadcrumb { margin: 24px 0 0; }
 .breadcrumb + h1, .breadcrumb + .page-header h1 { margin-top: 8px; }
 .page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-header h1 { flex: 1 1 auto; min-width: 0; }
 .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 /* Buttons */
@@ -107,7 +119,9 @@ button.link { font: inherit; }
   background: var(--bg);
   color: var(--text);
   font: inherit;
+  max-width: 100%;
 }
+.form textarea { resize: vertical; }
 .form .helptext { color: var(--muted); font-size: 0.875rem; }
 .form .helptext ul { margin: 4px 0 0; padding-left: 20px; }
 .form button { align-self: flex-start; }
@@ -123,14 +137,18 @@ button.link { font: inherit; }
   list-style: none;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 16px;
 }
-.course-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.course-card { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .course-name { margin: 0; font-size: 1.15rem; }
 .course-name a { color: var(--text); text-decoration: none; }
 .course-name a:hover { text-decoration: underline; }
-.course-description { margin: 0; overflow-wrap: anywhere; }
+.course-description { margin: 0; }
+/* Cards stay a similar height however long the name or description is; the detail page shows it all. */
+.course-name, .course-description { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.course-name { -webkit-line-clamp: 3; line-clamp: 3; }
+.course-description { -webkit-line-clamp: 4; line-clamp: 4; }
 .card-actions { display: flex; gap: 16px; align-items: center; margin-top: auto; }
 .card-actions form { margin: 0; }
 .empty-state { grid-column: 1 / -1; color: var(--muted); padding: 24px 0; }
