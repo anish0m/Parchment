@@ -36,7 +36,10 @@ class CourseFormMixin:
 
 def with_counts(queryset):
     # Aggregating drops the model's default ordering, so order explicitly.
-    return queryset.annotate(material_count=Count("materials")).order_by(Lower("name"))
+    return queryset.annotate(
+        material_count=Count("materials", distinct=True),
+        card_count=Count("flashcards", distinct=True),
+    ).order_by(Lower("name"))
 
 
 def course_list_context(queryset, page_number):
@@ -112,6 +115,7 @@ class CourseDetailView(OwnedCourseMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(material_list_context(self.object, self.request.GET.get("page")))
+        context["card_count"] = self.object.flashcards.count()
         return context
 
 

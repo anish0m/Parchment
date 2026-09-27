@@ -1,0 +1,12 @@
+<li class="flashcard editing" id="card-{{ card.pk }}">
+  <form class="form form-wide" method="post" action="{% url 'flashcards:update' card.pk %}"
+        hx-post="{% url 'flashcards:update' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">
+    {% csrf_token %}
+    {{ form.as_div }}
+    <div class="actions">
+      <button type="submit" class="button">Save</button>
+      <button type="button" class="link"
+              hx-get="{% url 'flashcards:detail' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">Cancel</button>
+    </div>
+  </form>
+</li>

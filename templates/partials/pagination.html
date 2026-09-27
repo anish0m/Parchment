@@ -1,12 +1,13 @@
 {% comment %}
 Page links for a list that HTMX swaps in place.
 Expects page_obj and target (the id of the element that wraps the list and these links).
-Links are plain ?page=N URLs, so they also work without JavaScript and after a refresh.
+Links are plain ?page=N URLs that keep any other query parameters (like filters),
+so they also work without JavaScript and after a refresh.
 {% endcomment %}
 {% if page_obj.paginator.num_pages > 1 %}
   <nav class="pagination" aria-label="Pages">
     {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}" hx-get="?page={{ page_obj.previous_page_number }}"
+      <a href="{% querystring page=page_obj.previous_page_number %}" hx-get="{% querystring page=page_obj.previous_page_number %}"
          hx-target="#{{ target }}" hx-indicator="#{{ target }}" hx-swap="outerHTML show:top" hx-push-url="true"
          rel="prev">← Previous</a>
     {% endif %}
@@ -17,13 +18,13 @@ Links are plain ?page=N URLs, so they also work without JavaScript and after a r
         {% elif number == page_obj.number %}
           <span class="current" aria-current="page">{{ number }}</span>
         {% else %}
-          <a href="?page={{ number }}" hx-get="?page={{ number }}"
+          <a href="{% querystring page=number %}" hx-get="{% querystring page=number %}"
              hx-target="#{{ target }}" hx-indicator="#{{ target }}" hx-swap="outerHTML show:top" hx-push-url="true">{{ number }}</a>
         {% endif %}
       {% endfor %}
     </span>
     {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}" hx-get="?page={{ page_obj.next_page_number }}"
+      <a href="{% querystring page=page_obj.next_page_number %}" hx-get="{% querystring page=page_obj.next_page_number %}"
          hx-target="#{{ target }}" hx-indicator="#{{ target }}" hx-swap="outerHTML show:top" hx-push-url="true"
          rel="next">Next →</a>
     {% endif %}

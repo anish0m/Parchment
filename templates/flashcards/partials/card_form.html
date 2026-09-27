@@ -1,0 +1,7 @@
+<form id="card-form" class="form form-wide" method="post" action="{% url 'flashcards:create' course.pk %}"
+      hx-post="{% url 'flashcards:create' course.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  {% if added %}<p class="success-text" role="status">Card added. Add another?</p>{% endif %}
+  {{ form.as_div }}
+  <button type="submit" class="button">Add card</button>
+</form>

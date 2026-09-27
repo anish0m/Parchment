@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Flashcards · {{ course.name }} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{{ course.get_absolute_url }}">← {{ course.name }}</a></p>
+  <h1>Flashcards</h1>
+
+  <details class="panel collapsible"{% if not page_obj.paginator.count and not is_filtered %} open{% endif %}>
+    <summary class="panel-title">Add a card</summary>
+    {% include "flashcards/partials/card_form.html" %}
+  </details>
+
+  <form id="card-filters" class="filters" method="get" action="{% url 'flashcards:list' course.pk %}"
+        hx-get="{% url 'flashcards:list' course.pk %}" hx-trigger="change"
+        hx-target="#card-list" hx-swap="outerHTML" hx-indicator="#card-list" hx-push-url="true">
+    <label>Material {{ filter_form.material }}</label>
+    <label>Box {{ filter_form.box }}</label>
+    <noscript><button type="submit" class="button secondary">Filter</button></noscript>
+  </form>
+
+  {% include "flashcards/partials/card_list.html" %}
+{% endblock %}

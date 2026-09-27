@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{% if card %}Edit card{% else %}Add card{% endif %} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{% url 'flashcards:list' course.pk %}">← {{ course.name }} flashcards</a></p>
+  <h1>{% if card %}Edit card{% else %}Add card{% endif %}</h1>
+
+  <form method="post" class="form form-wide panel"
+        action="{% if card %}{% url 'flashcards:update' card.pk %}{% else %}{% url 'flashcards:create' course.pk %}{% endif %}">
+    {% csrf_token %}
+    {{ form.as_div }}
+    <div class="actions">
+      <button type="submit" class="button">{% if card %}Save{% else %}Add card{% endif %}</button>
+      <a href="{% url 'flashcards:list' course.pk %}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

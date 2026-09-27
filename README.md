@@ -65,6 +65,7 @@ python manage.py runserver
 ### Development workflow
 
 ```bash
+python manage.py seed_flashcards <username>   # a demo course with 60 sample cards (--count, --reset)
 pytest                        # run the test suite
 ruff check . && ruff format . # lint and format
 pre-commit install            # run lint/format on every commit

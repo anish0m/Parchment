@@ -1,6 +1,9 @@
 """Small helpers for views that serve both full pages and HTMX fragments."""
 
+from urllib.parse import urlsplit
+
 from django.core.paginator import Paginator
+from django.http import QueryDict
 
 
 def is_htmx(request):
@@ -31,3 +34,15 @@ def paginate(queryset, page_number, per_page):
         page.paginator.get_elided_page_range(page.number, on_each_side=1, on_ends=1)
     )
     return page
+
+
+def current_query(request):
+    """Query parameters of the page the user is looking at.
+
+    For HTMX requests this comes from the HX-Current-URL header, so a list can be
+    re-rendered after an add or delete with the same filters and page.
+    """
+    current = request.headers.get("HX-Current-URL")
+    if is_htmx(request) and current:
+        return QueryDict(urlsplit(current).query)
+    return request.GET
