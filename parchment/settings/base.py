@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "rest_framework",
+    "django_q",
     "accounts",
     "courses",
     "materials",
@@ -93,6 +94,34 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 MATERIAL_MAX_UPLOAD_MB = env.int("MATERIAL_MAX_UPLOAD_MB", default=20)
 MATERIAL_MAX_PDF_PAGES = env.int("MATERIAL_MAX_PDF_PAGES", default=300)
 MATERIAL_MAX_TEXT_CHARS = env.int("MATERIAL_MAX_TEXT_CHARS", default=300_000)
+
+# Background tasks (Django-Q2), using PostgreSQL as the queue. Run workers with
+# `python manage.py qcluster`. With Q_SYNC=True tasks run inline, without a worker.
+Q_CLUSTER = {
+    "name": "parchment",
+    "orm": "default",
+    "workers": env.int("Q_WORKERS", default=2),
+    "timeout": env.int("Q_TIMEOUT", default=900),  # seconds a task may run
+    "retry": env.int("Q_TIMEOUT", default=900) + 300,  # must exceed timeout
+    "max_attempts": 1,  # failures are shown to the user, who can retry
+    "catch_up": False,
+    "sync": env.bool("Q_SYNC", default=False),
+    "label": "Background tasks",
+}
+
+# Flashcard generation.
+# CARD_GENERATOR: "auto" uses Claude when an Anthropic API key is set, else the
+# built-in rules; "claude" or "rules" force one. Claude failures fall back to rules.
+CARD_GENERATOR = env("CARD_GENERATOR", default="auto")
+CARD_GENERATION_MODEL = env("CARD_GENERATION_MODEL", default="claude-opus-5")
+CARD_GENERATION_EFFORT = env("CARD_GENERATION_EFFORT", default="medium")
+# EMBEDDING_BACKEND: "auto" uses sentence-transformers when installed and the model
+# loads, else TF-IDF; "sentence-transformers" or "tfidf" force one.
+EMBEDDING_BACKEND = env("EMBEDDING_BACKEND", default="auto")
+EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="sentence-transformers/all-MiniLM-L6-v2")
+MAX_CONCEPTS_PER_MATERIAL = env.int("MAX_CONCEPTS_PER_MATERIAL", default=12)
+MAX_CARDS_PER_CONCEPT = env.int("MAX_CARDS_PER_CONCEPT", default=5)
+MAX_CARDS_PER_MATERIAL = env.int("MAX_CARDS_PER_MATERIAL", default=60)
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

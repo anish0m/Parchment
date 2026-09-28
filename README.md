@@ -48,7 +48,9 @@ The app is at http://localhost:8000. Migrations run automatically when the conta
 docker compose exec web python manage.py createsuperuser
 ```
 
-The dev container mounts the source tree and uses Django's auto-reloading `runserver`. PostgreSQL data and uploaded files are kept in the `postgres_data` and `media_data` volumes.
+Compose runs three services: `web` (Django's auto-reloading `runserver`, with the source tree mounted), `worker` (processes uploads in the background) and `db` (PostgreSQL). PostgreSQL data and uploaded files are kept in the `postgres_data` and `media_data` volumes. The worker doesn't auto-reload: after changing generation code, run `docker compose restart worker`.
+
+To have Claude write the flashcards, set `ANTHROPIC_API_KEY` in `.env`. Without it, the built-in rules write them.
 
 ### Without Docker
 
@@ -60,7 +62,12 @@ pip install -r requirements-dev.txt
 cp .env.example .env          # point DATABASE_URL at your Postgres (host localhost, not db)
 python manage.py migrate
 python manage.py runserver
+python manage.py qcluster     # in a second terminal: the background worker
 ```
+
+To skip the worker, set `Q_SYNC=True` in `.env`; uploads are then processed during the request.
+
+`requirements.txt` installs PyTorch's CPU-only build for sentence-transformers. If `sentence-transformers` isn't installed, or its model can't be downloaded, generation falls back to TF-IDF embeddings.
 
 ### Development workflow
 
@@ -80,8 +87,8 @@ CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `chec
 | `parchment/settings/` | `base.py` (shared, reads env vars), `dev.py`, `test.py`, `prod.py` |
 | `accounts/` | Users and authentication |
 | `courses/` | `Course` model and course pages |
-| `materials/` | Uploads and PDF text extraction |
-| `flashcards/` | `Flashcard` model and the generation pipeline |
+| `materials/` | Uploads, PDF text extraction, and the background tasks (`materials/tasks.py`) |
+| `flashcards/` | `Flashcard` model, card pages, and the generation pipeline (`flashcards/generation/`) |
 | `study/` | Spaced repetition, review logs and study sessions |
 | `templates/` | Shared templates; `base.html` loads HTMX and Alpine.js |
 | `static/` | CSS and other static assets |
@@ -96,7 +103,17 @@ CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `chec
 - Two-column pages (common in papers) are read one column at a time, with any full-width title block first.
 - Scanned PDFs with no text layer, password-protected PDFs and damaged files are saved as **Failed** with a message explaining why.
 
-Extraction currently runs during the upload request; it moves to a background worker in Phase 4.
+### How flashcards are generated
+
+After an upload, a background worker (Django-Q2, using PostgreSQL as its queue) extracts the text and then runs `flashcards/generation/`:
+
+1. **Chunking** (`chunking.py`): the text is split into sentences and grouped into chunks of about 110 words. Chunks end at headings and paragraph breaks so they rarely mix topics, and otherwise overlap by one sentence. Reference lists and number-heavy fragments are dropped.
+2. **Embeddings** (`embeddings.py`): each chunk is embedded with sentence-transformers (`all-MiniLM-L6-v2`), or TF-IDF + LSA when that isn't available.
+3. **Concept clustering** (`clustering.py`): KMeans groups the chunks into concepts. The number of concepts is aimed at the document's length (about one per 700 words, at most 12) and fine-tuned by silhouette score. Each concept keeps its most central chunks and its distinctive keywords.
+4. **Question generation** (`generators.py`): Claude writes up to 5 cards per concept from those chunks, using structured output so every card is a validated question, answer and source quote. Claude also names each concept. Refusal fallbacks are on (`fallbacks: "default"`), so a declined request is retried on another Claude model. If there's no API key, or the request fails, built-in rules write the cards instead: definition sentences become "What is X?" cards and key terms become fill-in-the-blanks.
+5. **Quality checks** (`quality.py`): empty, overlong and self-answering cards are dropped, along with exact and near duplicates, including duplicates of cards already in the course.
+
+The material's page shows each stage live and says which generator wrote the cards. **Regenerate cards** replaces only generated cards you haven't edited or studied; your own cards and edits are kept.
 
 ### Configuration
 
@@ -114,6 +131,14 @@ All settings come from environment variables (see `.env.example`):
 | `MATERIAL_MAX_PDF_PAGES` | `300` | Most pages a PDF can have |
 | `MATERIAL_MAX_TEXT_CHARS` | `300000` | Longest pasted text |
 | `EMAIL_URL` | `smtp://localhost:25` (prod) | Outgoing mail for password resets, e.g. `smtp+tls://user:pass@host:587`. Dev prints emails to the console |
+| `ANTHROPIC_API_KEY` | — | Lets Claude write the flashcards |
+| `CARD_GENERATOR` | `auto` | `auto` (Claude if a key is set, else rules), `claude` or `rules` |
+| `CARD_GENERATION_MODEL` | `claude-opus-5` | Claude model for card writing |
+| `CARD_GENERATION_EFFORT` | `medium` | `low`, `medium` or `high`: how much Claude thinks per request |
+| `EMBEDDING_BACKEND` | `auto` | `auto`, `sentence-transformers` or `tfidf` |
+| `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | |
+| `MAX_CONCEPTS_PER_MATERIAL` / `MAX_CARDS_PER_CONCEPT` / `MAX_CARDS_PER_MATERIAL` | `12` / `5` / `60` | Limits on how many concepts and cards are made |
+| `Q_WORKERS` / `Q_TIMEOUT` / `Q_SYNC` | `2` / `900` / `False` | Worker processes, seconds a task may run, and whether to run tasks inline without a worker |
 
 ## License
 

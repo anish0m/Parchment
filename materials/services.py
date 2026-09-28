@@ -1,9 +1,10 @@
-"""Creating materials and extracting their text.
+"""Creating materials, and the text-extraction step of processing them.
 
-Extraction runs during the upload request for now. Phase 4 moves it to a
-background worker, which is why materials carry a status.
+Processing runs in a background worker (materials.tasks); with Q_CLUSTER["sync"]
+it runs inline instead, which the tests use.
 """
 
+from django.conf import settings
 from django.db import transaction
 
 from .extraction import ExtractionError, extract_pdf_text
@@ -19,11 +20,25 @@ def create_material(course, *, title, source_type, text="", upload=None):
     else:
         material.raw_text = text
     material.save()
-    process_material(material)
+    enqueue("materials.tasks.process_material", material)
     return material
 
 
-def process_material(material):
+def enqueue(task, material):
+    """Queues a task for a material once the current transaction has committed."""
+    from django_q.tasks import async_task
+
+    def send():
+        async_task(task, material.pk, group="materials", task_name=f"{task}:{material.pk}")
+
+    if settings.Q_CLUSTER.get("sync"):
+        send()
+    else:
+        transaction.on_commit(send)
+
+
+def extract_material_text(material):
+    """Fills in the material's text. Returns False (and marks it failed) if it can't."""
     material.status = Material.Status.PROCESSING
     material.error_message = ""
     material.save(update_fields=["status", "error_message", "updated_at"])
@@ -40,12 +55,9 @@ def process_material(material):
         material.status = Material.Status.FAILED
         material.error_message = str(exc)
         material.raw_text = ""
-    else:
-        material.status = Material.Status.READY
-
     material.word_count = word_count(material.raw_text)
     material.save()
-    return material
+    return material.status != Material.Status.FAILED
 
 
 def delete_material_file(material):

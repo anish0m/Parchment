@@ -1,19 +1,29 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import DeleteView, DetailView, FormView
 
 from courses.models import Course
-from parchment.htmx import is_htmx, paginate
+from parchment.htmx import current_query, is_htmx, paginate
 
 from .forms import MaterialForm
 from .models import Material
-from .services import create_material
+from .services import create_material, enqueue
 
 MATERIALS_PER_PAGE = 20
+
+
+def is_stalled(material):
+    """Still "in progress" long after a worker would have finished or timed out."""
+    limit = timedelta(seconds=settings.Q_CLUSTER["timeout"] + 300)
+    return material.in_progress and timezone.now() - material.updated_at > limit
 
 
 def material_list_context(course, page_number):
@@ -56,15 +66,70 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
             text=data["text"],
             upload=data["file"],
         )
-        if material.status == Material.Status.READY:
-            messages.success(self.request, f"Added “{material.title}”.")
+        material.refresh_from_db()
+        if material.status == Material.Status.FAILED:
+            messages.error(self.request, f"Couldn't process “{material.title}”.")
+        elif material.in_progress:
+            messages.success(
+                self.request,
+                f"Added “{material.title}”. Its flashcards are being generated; "
+                "this page updates when they're ready.",
+            )
         else:
-            messages.error(self.request, f"Couldn't read “{material.title}”.")
+            messages.success(self.request, f"Added “{material.title}”.")
         return redirect(material)
 
 
 class MaterialDetailView(OwnedMaterialMixin, DetailView):
     template_name = "materials/material_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        material = self.object
+        context["card_count"] = material.flashcards.count()
+        context["stalled"] = is_stalled(material)
+        context["cards_url"] = (
+            reverse("flashcards:list", args=[material.course_id]) + f"?material={material.pk}"
+        )
+        return context
+
+
+class MaterialStatusView(OwnedMaterialMixin, View):
+    """Polled by HTMX while a material is processing.
+
+    ?view=row returns the material's row for the course page; otherwise the status
+    badge for its own page, which reloads once processing has finished.
+    """
+
+    def get(self, request, pk):
+        material = get_object_or_404(self.get_queryset(), pk=pk)
+        if request.GET.get("view") == "row":
+            return render(request, "materials/partials/material_row.html", {"material": material})
+        response = render(request, "materials/partials/detail_status.html", {"material": material})
+        if not material.in_progress:
+            response["HX-Refresh"] = "true"  # show the results
+        return response
+
+
+class MaterialRegenerateView(OwnedMaterialMixin, View):
+    """Regenerates cards, or retries a material whose processing failed or stalled."""
+
+    def post(self, request, pk):
+        material = get_object_or_404(self.get_queryset(), pk=pk)
+        if material.in_progress and not is_stalled(material):
+            messages.info(request, "This material is already being processed.")
+            return redirect(material)
+
+        material.status = Material.Status.PENDING
+        material.error_message = ""
+        material.save(update_fields=["status", "error_message", "updated_at"])
+        if material.raw_text:
+            enqueue("materials.tasks.regenerate_cards", material)
+            messages.success(request, "Generating new flashcards…")
+        else:
+            enqueue("materials.tasks.process_material", material)
+            messages.success(request, "Processing this material again…")
+        return redirect(material)
 
 
 class MaterialFileView(OwnedMaterialMixin, View):
@@ -96,7 +161,10 @@ class MaterialDeleteView(OwnedMaterialMixin, DeleteView):
             return render(
                 self.request,
                 "materials/partials/material_list.html",
-                material_list_context(course, self.request.POST.get("page")),
+                material_list_context(
+                    course,
+                    current_query(self.request).get("page") or self.request.POST.get("page"),
+                ),
             )
         messages.success(self.request, f"Deleted “{title}”.")
         return redirect(course)

@@ -30,6 +30,8 @@ class FlashcardForm(forms.ModelForm):
 
     def save(self, commit=True):
         self.instance.course = self.course
+        if self.instance.pk and self.has_changed():
+            self.instance.is_edited = True
         return super().save(commit=commit)
 
 

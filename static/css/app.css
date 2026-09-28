@@ -190,7 +190,7 @@ button.link { font: inherit; }
 .badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
 .status-ready { border-color: var(--success); color: var(--success); }
 .status-failed { border-color: var(--error); color: var(--error); }
-.status-pending, .status-processing { border-color: var(--accent); color: var(--accent); }
+.status-pending, .status-processing, .status-generating { border-color: var(--accent); color: var(--accent); }
 
 .facts { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 16px 0; }
 .facts div { min-width: 0; }
@@ -239,4 +239,12 @@ select, .form select {
 @media (max-width: 480px) {
   .flashcard { grid-template-columns: minmax(0, 1fr); }
   .card-actions { flex-direction: row; justify-content: flex-start; gap: 16px; }
+}
+
+/* Processing status */
+.status-line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.status-pending, .status-processing, .status-generating { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .status-pending, .status-processing, .status-generating { animation: none; }
 }

@@ -1,5 +1,6 @@
 {% load humanize %}
-<li class="material-row" id="material-{{ material.pk }}">
+<li class="material-row" id="material-{{ material.pk }}"{% if material.in_progress %}
+    hx-get="{% url 'materials:status' material.pk %}?view=row" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
   <div class="material-main">
     <a class="material-title" href="{{ material.get_absolute_url }}">{{ material.title }}</a>
     <div class="badges">
@@ -10,6 +11,8 @@
   <p class="muted small material-meta">
     {% if material.status == "failed" %}
       <span class="error-text">{{ material.error_message|truncatewords:14 }}</span>
+    {% elif material.in_progress %}
+      {{ material.get_status_display }}…
     {% else %}
       {% if material.page_count %}{{ material.page_count }} page{{ material.page_count|pluralize }} · {% endif %}{{ material.word_count|intcomma }} word{{ material.word_count|pluralize }} ·
     {% endif %}

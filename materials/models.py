@@ -17,10 +17,13 @@ class Material(models.Model):
         PDF = "pdf", "PDF"
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        PROCESSING = "processing", "Processing"
+        PENDING = "pending", "Queued"
+        PROCESSING = "processing", "Reading text"
+        GENERATING = "generating", "Generating cards"
         READY = "ready", "Ready"
         FAILED = "failed", "Failed"
+
+    IN_PROGRESS = (Status.PENDING, Status.PROCESSING, Status.GENERATING)
 
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="materials")
     title = models.CharField(max_length=200)
@@ -32,6 +35,8 @@ class Material(models.Model):
     word_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
     error_message = models.TextField(blank=True)
+    # How the latest cards were made, e.g. which generator and why.
+    generation_note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -48,3 +53,7 @@ class Material(models.Model):
     @property
     def is_pdf(self):
         return self.source_type == self.SourceType.PDF
+
+    @property
+    def in_progress(self):
+        return self.status in self.IN_PROGRESS

@@ -29,6 +29,8 @@ class Flashcard(models.Model):
     # New cards are due straight away.
     next_review_at = models.DateTimeField(default=timezone.now)
     is_generated = models.BooleanField(default=False)
+    # Set when the user edits a card, so regenerating a material never overwrites it.
+    is_edited = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

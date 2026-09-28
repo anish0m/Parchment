@@ -33,6 +33,28 @@ services:
       db:
         condition: service_healthy
 
+  # Processes uploads in the background: text extraction and card generation.
+  worker:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements-dev.txt
+    command: python manage.py qcluster
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: parchment.settings.dev
+      DJANGO_MEDIA_ROOT: /app/media
+      DJANGO_MIGRATE: "0"
+      DJANGO_COLLECTSTATIC: "0"
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+
 volumes:
   postgres_data:
   media_data:

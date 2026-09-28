@@ -1,3 +1,6 @@
+# PyTorch's CPU-only wheels: a fraction of the size of the default CUDA build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 Django>=5.2,<5.3
 djangorestframework>=3.16,<3.17
 django-environ>=0.12,<0.13
@@ -5,3 +8,13 @@ psycopg[binary]>=3.2,<3.3
 gunicorn>=23,<24
 whitenoise>=6.9,<7
 pdfplumber>=0.11,<0.12
+
+# Background tasks
+django-q2>=1.7,<2
+
+# Flashcard generation
+anthropic>=1,<2
+numpy>=1.26,<3
+scikit-learn>=1.5,<2
+sentence-transformers>=3,<7
+torch>=2.4,<3

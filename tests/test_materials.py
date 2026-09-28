@@ -190,7 +190,7 @@ def test_unreadable_pdf_is_saved_as_failed_with_the_reason(auth_client, course, 
     assert material.raw_text == ""
     detail = auth_client.get(response.url).content.decode()
     assert message in detail
-    assert "Couldn&#x27;t read" in detail  # flash message
+    assert "Couldn&#x27;t process" in detail  # flash message
 
 
 def test_cannot_add_to_another_users_course(auth_client, other_user, make_course):
