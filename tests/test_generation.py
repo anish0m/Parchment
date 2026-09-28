@@ -12,6 +12,7 @@ from flashcards.generation.generators import (
     CardDraft,
     ClaudeGenerator,
     ConceptInput,
+    GeminiGenerator,
     GeneratedCard,
     GeneratedConcept,
     GeneratedDeck,
@@ -337,13 +338,90 @@ def test_claude_generator_connection_error():
         ClaudeGenerator(client=FakeClient(error=error)).generate(CONCEPTS)
 
 
+# --- Gemini generator ------------------------------------------------------------
+
+
+class FakeGeminiClient:
+    def __init__(self, text=None, error=None):
+        self.calls = []
+        self.text, self.error = text, error
+        self.models = SimpleNamespace(generate_content=self.generate_content)
+
+    def generate_content(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error:
+            raise self.error
+        return SimpleNamespace(text=self.text)
+
+
+def test_gemini_generator_request_and_cards(settings):
+    settings.MAX_CARDS_PER_CONCEPT = 5
+    deck = GeneratedDeck(
+        concepts=[
+            GeneratedConcept(
+                concept_number=1,
+                concept_name="Light absorption",
+                cards=[
+                    GeneratedCard(
+                        question="Which colours does chlorophyll absorb?",
+                        answer="Red and blue light.",
+                        source_quote="Chlorophyll absorbs red and blue light.",
+                    )
+                ],
+            )
+        ]
+    )
+    client = FakeGeminiClient(deck.model_dump_json())
+
+    cards = GeminiGenerator(client=client, model="gemini-test").generate(CONCEPTS, "Week 1")
+
+    call = client.calls[0]
+    assert call["model"] == "gemini-test"
+    assert "Material: Week 1" in call["contents"]
+    assert call["config"].response_mime_type == "application/json"
+    assert "flashcards" in call["config"].system_instruction
+    assert cards == [
+        CardDraft(
+            question="Which colours does chlorophyll absorb?",
+            answer="Red and blue light.",
+            concept_label="Light absorption",
+            source_excerpt="Chlorophyll absorbs red and blue light.",
+        )
+    ]
+
+
+@pytest.mark.parametrize("text", [None, "not json", '{"concepts": [{"oops": 1}]}'])
+def test_gemini_generator_unreadable_responses(text):
+    with pytest.raises(GenerationError, match="couldn't be read"):
+        GeminiGenerator(client=FakeGeminiClient(text)).generate(CONCEPTS)
+
+
+@pytest.mark.parametrize(
+    "code, message",
+    [(403, "rejected"), (429, "rate limit"), (400, r"error \(400\)"), (500, r"error \(500\)")],
+)
+def test_gemini_generator_api_errors(code, message):
+    from google.genai import errors
+
+    error = errors.APIError(code, {"error": {"message": "nope", "status": "X"}})
+
+    with pytest.raises(GenerationError, match=message):
+        GeminiGenerator(client=FakeGeminiClient(error=error)).generate(CONCEPTS)
+
+
 def test_generator_choice(settings, monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "GEMINI_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
     settings.CARD_GENERATOR = "auto"
     assert isinstance(get_generator(), RuleBasedGenerator)
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    assert isinstance(get_generator(), ClaudeGenerator)
+
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-test")
+    assert isinstance(get_generator(), GeminiGenerator)
+
+    settings.CARD_GENERATOR = "claude"
     assert isinstance(get_generator(), ClaudeGenerator)
 
     settings.CARD_GENERATOR = "rules"

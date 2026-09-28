@@ -110,11 +110,13 @@ Q_CLUSTER = {
 }
 
 # Flashcard generation.
-# CARD_GENERATOR: "auto" uses Claude when an Anthropic API key is set, else the
-# built-in rules; "claude" or "rules" force one. Claude failures fall back to rules.
+# CARD_GENERATOR: "auto" uses Gemini when GEMINI_API_KEY is set, else Claude when an
+# Anthropic key is set, else the built-in rules; "gemini", "claude" or "rules" force
+# one. LLM failures fall back to rules.
 CARD_GENERATOR = env("CARD_GENERATOR", default="auto")
 CARD_GENERATION_MODEL = env("CARD_GENERATION_MODEL", default="claude-opus-5")
 CARD_GENERATION_EFFORT = env("CARD_GENERATION_EFFORT", default="medium")
+CARD_GENERATION_GEMINI_MODEL = env("CARD_GENERATION_GEMINI_MODEL", default="gemini-flash-latest")
 # EMBEDDING_BACKEND: "auto" uses sentence-transformers when installed and the model
 # loads, else TF-IDF; "sentence-transformers" or "tfidf" force one.
 EMBEDDING_BACKEND = env("EMBEDDING_BACKEND", default="auto")

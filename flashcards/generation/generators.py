@@ -1,12 +1,13 @@
-"""Question/answer generation: Claude, with built-in rules as the offline fallback."""
+"""Question/answer generation: Gemini or Claude, with built-in rules as the offline fallback."""
 
+import json
 import logging
 import os
 import re
 from dataclasses import dataclass
 
 from django.conf import settings
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .chunking import split_sentences
 
@@ -246,6 +247,7 @@ def _prompt(concepts, material_title):
 
 class ClaudeGenerator:
     name = "claude"
+    label = "Claude"
 
     def __init__(self, client=None, model=None, effort=None):
         if client is None:
@@ -315,13 +317,96 @@ class ClaudeGenerator:
         return drafts
 
 
+# --- Gemini ---------------------------------------------------------------------
+
+GEMINI_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "concepts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "concept_number": {"type": "integer"},
+                    "concept_name": {"type": "string"},
+                    "cards": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question": {"type": "string"},
+                                "answer": {"type": "string"},
+                                "source_quote": {"type": "string"},
+                            },
+                            "required": ["question", "answer", "source_quote"],
+                        },
+                    },
+                },
+                "required": ["concept_number", "concept_name", "cards"],
+            },
+        },
+    },
+    "required": ["concepts"],
+}
+
+
+class GeminiGenerator:
+    name = "gemini"
+    label = "Gemini"
+
+    def __init__(self, client=None, model=None):
+        if client is None:
+            from google import genai
+
+            client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        self.client = client
+        self.model = model or settings.CARD_GENERATION_GEMINI_MODEL
+
+    def generate(self, concepts, material_title=""):
+        from google.genai import errors, types
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=_prompt(concepts, material_title),
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT.format(
+                        max_cards=settings.MAX_CARDS_PER_CONCEPT
+                    ),
+                    response_mime_type="application/json",
+                    response_schema=GEMINI_RESPONSE_SCHEMA,
+                    temperature=0.3,
+                ),
+            )
+        except errors.APIError as exc:
+            if exc.code in (401, 403):
+                raise GenerationError("the Gemini API key was rejected") from exc
+            if exc.code == 429:
+                raise GenerationError("the Gemini API rate limit was reached") from exc
+            raise GenerationError(f"the Gemini API returned an error ({exc.code})") from exc
+        except (OSError, ConnectionError) as exc:
+            raise GenerationError("the Gemini API couldn't be reached") from exc
+
+        try:
+            deck = GeneratedDeck.model_validate(json.loads(response.text or ""))
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise GenerationError("Gemini's answer couldn't be read") from exc
+        return ClaudeGenerator._drafts(deck, concepts)
+
+
 def claude_is_configured():
     return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
 
+def gemini_is_configured():
+    return bool(os.environ.get("GEMINI_API_KEY"))
+
+
 def get_generator():
-    """The generator to try first: Claude, or the rules if Claude isn't set up."""
+    """The generator to try first: Gemini or Claude if configured, else rules."""
     choice = settings.CARD_GENERATOR
+    if choice == "gemini" or (choice == "auto" and gemini_is_configured()):
+        return GeminiGenerator()
     if choice == "claude" or (choice == "auto" and claude_is_configured()):
         return ClaudeGenerator()
     return RuleBasedGenerator()

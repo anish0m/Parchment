@@ -14,6 +14,7 @@ from .embeddings import get_embedder
 from .generators import (
     ClaudeGenerator,
     ConceptInput,
+    GeminiGenerator,
     GenerationError,
     RuleBasedGenerator,
     get_generator,
@@ -40,17 +41,17 @@ def replaceable_cards(material):
 
 def _generate(concepts, title):
     generator = get_generator()
-    if isinstance(generator, ClaudeGenerator):
+    if isinstance(generator, (GeminiGenerator, ClaudeGenerator)):
         try:
             drafts = generator.generate(concepts, title)
-            return drafts, f"Cards written by Claude ({generator.model})."
+            return drafts, f"Cards written by {generator.label} ({generator.model})."
         except GenerationError as exc:
-            logger.warning("Claude generation failed, using rules: %s", exc)
+            logger.warning("%s generation failed, using rules: %s", generator.label, exc)
             reason = f"because {exc}"
     elif settings.CARD_GENERATOR == "rules":
         reason = ""
     else:
-        reason = "because no Anthropic API key is set"
+        reason = "because no Gemini or Anthropic API key is set"
     drafts = RuleBasedGenerator().generate(concepts, title)
     return drafts, " ".join(f"Cards written by the built-in rules {reason}".split()) + "."
 
