@@ -45,6 +45,9 @@ jobs:
           cache-dependency-path: requirements*.txt
       - run: pip install -r requirements-dev.txt
       - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - name: Validate the OpenAPI schema
+        run: python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yml
       - run: DJANGO_SETTINGS_MODULE=parchment.settings.prod python manage.py check --deploy --fail-level ERROR
         env:
           DJANGO_ALLOWED_HOSTS: example.com

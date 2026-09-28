@@ -4,8 +4,11 @@ Processing runs in a background worker (materials.tasks); with Q_CLUSTER["sync"]
 it runs inline instead, which the tests use.
 """
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from .extraction import ExtractionError, extract_pdf_text
 from .models import Material
@@ -22,6 +25,34 @@ def create_material(course, *, title, source_type, text="", upload=None):
     material.save()
     enqueue("materials.tasks.process_material", material)
     return material
+
+
+class AlreadyProcessing(Exception):
+    """The material is being processed right now, so it can't be restarted."""
+
+
+def is_stalled(material):
+    """Still "in progress" long after a worker would have finished or timed out."""
+    limit = timedelta(seconds=settings.Q_CLUSTER["timeout"] + 300)
+    return material.in_progress and timezone.now() - material.updated_at > limit
+
+
+def reprocess(material):
+    """Regenerate a material's cards, or retry one whose processing failed or stalled.
+
+    Returns "regenerate" or "process" (the step that was queued). Raises
+    AlreadyProcessing while a worker is still on it.
+    """
+    if material.in_progress and not is_stalled(material):
+        raise AlreadyProcessing
+    material.status = Material.Status.PENDING
+    material.error_message = ""
+    material.save(update_fields=["status", "error_message", "updated_at"])
+    if material.raw_text:
+        enqueue("materials.tasks.regenerate_cards", material)
+        return "regenerate"
+    enqueue("materials.tasks.process_material", material)
+    return "process"
 
 
 def enqueue(task, material):

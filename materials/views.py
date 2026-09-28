@@ -1,29 +1,21 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.views import View
 from django.views.generic import DeleteView, DetailView, FormView
 
 from courses.models import Course
 from parchment.htmx import current_query, is_htmx, paginate
+from parchment.throttling import GenerationThrottle, UploadThrottle, describe_wait, wait_time
 
 from .forms import MaterialForm
 from .models import Material
-from .services import create_material, enqueue
+from .services import AlreadyProcessing, create_material, is_stalled, reprocess
 
 MATERIALS_PER_PAGE = 20
-
-
-def is_stalled(material):
-    """Still "in progress" long after a worker would have finished or timed out."""
-    limit = timedelta(seconds=settings.Q_CLUSTER["timeout"] + 300)
-    return material.in_progress and timezone.now() - material.updated_at > limit
 
 
 def material_list_context(course, page_number):
@@ -58,6 +50,14 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
+        wait = wait_time(self.request, UploadThrottle)
+        if wait:
+            form.add_error(
+                None,
+                "You've added a lot of materials in a short time. "
+                f"Please try again in {describe_wait(wait)}.",
+            )
+            return self.form_invalid(form)
         data = form.cleaned_data
         material = create_material(
             self.course,
@@ -116,18 +116,22 @@ class MaterialRegenerateView(OwnedMaterialMixin, View):
 
     def post(self, request, pk):
         material = get_object_or_404(self.get_queryset(), pk=pk)
-        if material.in_progress and not is_stalled(material):
+        wait = wait_time(request, GenerationThrottle)
+        if wait:
+            messages.error(
+                request,
+                "You've regenerated cards a lot in a short time. "
+                f"Please try again in {describe_wait(wait)}.",
+            )
+            return redirect(material)
+        try:
+            step = reprocess(material)
+        except AlreadyProcessing:
             messages.info(request, "This material is already being processed.")
             return redirect(material)
-
-        material.status = Material.Status.PENDING
-        material.error_message = ""
-        material.save(update_fields=["status", "error_message", "updated_at"])
-        if material.raw_text:
-            enqueue("materials.tasks.regenerate_cards", material)
+        if step == "regenerate":
             messages.success(request, "Generating new flashcards…")
         else:
-            enqueue("materials.tasks.process_material", material)
             messages.success(request, "Processing this material again…")
         return redirect(material)
 

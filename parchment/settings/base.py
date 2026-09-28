@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
     "django_q",
     "accounts",
     "courses",
@@ -144,13 +146,47 @@ LOGOUT_REDIRECT_URL = "home"
 
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="Parchment <noreply@localhost>")
 
+# Rate limits and other short-lived data. Per-process memory by default; production
+# uses the database so every web worker shares the same counts.
+CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://")}
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # Token first, so unauthenticated requests get 401 with a WWW-Authenticate header.
+        "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_PAGINATION_CLASS": "api.pagination.PageNumberPagination",
+    "PAGE_SIZE": 30,
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": env("RATE_LIMIT_ANON", default="60/hour"),
+        "user": env("RATE_LIMIT_USER", default="2000/hour"),
+        # Web pages and API together, per user.
+        "uploads": env("RATE_LIMIT_UPLOADS", default="30/hour"),
+        "generation": env("RATE_LIMIT_GENERATION", default="20/hour"),
+    },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Parchment API",
+    "DESCRIPTION": (
+        "Courses, study materials, flashcards and Leitner reviews. Every endpoint "
+        "only sees the signed-in user's data. Authenticate with a session cookie or "
+        "a token from POST /api/v1/auth/token/ (header: `Authorization: Token <key>`)."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 LOGGING = {

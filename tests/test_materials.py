@@ -341,3 +341,41 @@ def test_deleting_a_course_removes_its_material_files(
 
     assert not Course.objects.exists()
     assert stored_files(media_root) == []
+
+
+def limit(settings, **rates):
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_RATES": {**settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"], **rates},
+    }
+
+
+def test_uploads_are_rate_limited(auth_client, course, settings):
+    limit(settings, uploads="2/hour")
+    assert post_text(auth_client, course).status_code == 302
+    assert post_text(auth_client, course).status_code == 302
+
+    response = post_text(auth_client, course, text="Kept text\nStill here.")
+
+    assert response.status_code == 200
+    assert "Please try again in an hour" in response.text
+    assert "Kept text" in response.text  # the form keeps what was typed
+    assert course.materials.count() == 2
+
+
+def test_invalid_uploads_dont_use_up_the_limit(auth_client, course, settings):
+    limit(settings, uploads="1/hour")
+    post_text(auth_client, course, text="")
+    assert post_text(auth_client, course).status_code == 302
+
+
+def test_regenerating_is_rate_limited(auth_client, course, settings):
+    limit(settings, generation="1/hour")
+    post_text(auth_client, course)
+    material = course.materials.get()
+    regenerate = reverse("materials:regenerate", args=[material.pk])
+
+    auth_client.post(regenerate)
+    response = auth_client.post(regenerate, follow=True)
+
+    assert "Please try again in an hour" in response.text

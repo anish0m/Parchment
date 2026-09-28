@@ -1,6 +1,7 @@
 import itertools
 
 import pytest
+from django.core.cache import cache
 
 from accounts.models import User
 from courses.models import Course
@@ -8,6 +9,14 @@ from courses.models import Course
 PASSWORD = "correct-horse-battery-staple"
 
 _counter = itertools.count()
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Rate-limit counts live in the cache; start every test with none."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
