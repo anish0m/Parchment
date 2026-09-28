@@ -36,6 +36,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "parchment.middleware.ContentSecurityPolicyMiddleware",
+    "parchment.middleware.MaxRequestSizeMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -44,6 +46,22 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Scripts and the API docs' assets come from jsDelivr. Alpine.js evaluates its
+# attributes with Function(), which needs 'unsafe-eval'; a few elements set their
+# width with inline styles. Set DJANGO_CSP to an empty string to turn it off.
+CONTENT_SECURITY_POLICY = env(
+    "DJANGO_CSP",
+    default=(
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval'; "
+        "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "img-src 'self' data: https://cdn.jsdelivr.net; "
+        "font-src 'self' https://cdn.jsdelivr.net; "
+        "connect-src 'self'; "
+        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    ),
+)
 
 ROOT_URLCONF = "parchment.urls"
 
@@ -171,6 +189,8 @@ REST_FRAMEWORK = {
         # Web pages and API together, per user.
         "uploads": env("RATE_LIMIT_UPLOADS", default="30/hour"),
         "generation": env("RATE_LIMIT_GENERATION", default="20/hour"),
+        # Failed sign-ins, per IP address.
+        "login": env("RATE_LIMIT_LOGIN", default="30/hour"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

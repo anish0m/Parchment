@@ -32,6 +32,23 @@ class GenerationThrottle(UserScopedThrottle):
     scope = "generation"
 
 
+class LoginThrottle(UserScopedThrottle):
+    scope = "login"
+
+
+def is_blocked(request, throttle_class):
+    """Like wait_time, but only looks: the request isn't counted."""
+    throttle = throttle_class()
+    if throttle.rate is None:
+        return None
+    key = throttle.get_cache_key(request, None)
+    now = throttle.timer()
+    history = [t for t in throttle.cache.get(key, []) if t > now - throttle.duration]
+    if len(history) < throttle.num_requests:
+        return None
+    return max(int(history[-1] + throttle.duration - now), 1)
+
+
 def wait_time(request, throttle_class):
     """For plain Django views: None if the request is allowed (and counts it), else
     the number of seconds to wait."""

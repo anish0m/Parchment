@@ -51,4 +51,4 @@ jobs:
       - run: DJANGO_SETTINGS_MODULE=parchment.settings.prod python manage.py check --deploy --fail-level ERROR
         env:
           DJANGO_ALLOWED_HOSTS: example.com
-      - run: pytest
+      - run: pytest --cov

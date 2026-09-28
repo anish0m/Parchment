@@ -12,6 +12,9 @@ CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = env.int("DJANGO_SECURE_HSTS_SECONDS", default=0)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
 SECURE_CONTENT_TYPE_NOSNIFF = True
+# HTMX reads the CSRF token from the page, so no JavaScript needs the cookie.
+CSRF_COOKIE_HTTPONLY = True
+SECURE_REFERRER_POLICY = "same-origin"
 
 # Used for password reset emails, e.g. smtp+tls://user:password@smtp.example.com:587
 vars().update(env.email_url("EMAIL_URL", default="smtp://localhost:25"))

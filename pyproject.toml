@@ -22,3 +22,13 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 addopts = "-ra"
 filterwarnings = ["ignore:No directory at:UserWarning"]
+
+[tool.coverage.run]
+source = ["accounts", "api", "courses", "flashcards", "materials", "parchment", "study"]
+omit = ["*/migrations/*", "parchment/asgi.py", "parchment/wsgi.py", "parchment/settings/prod.py"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+skip_covered = true
+show_missing = true
