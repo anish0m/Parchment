@@ -125,6 +125,11 @@ MAX_CONCEPTS_PER_MATERIAL = env.int("MAX_CONCEPTS_PER_MATERIAL", default=12)
 MAX_CARDS_PER_CONCEPT = env.int("MAX_CARDS_PER_CONCEPT", default=5)
 MAX_CARDS_PER_MATERIAL = env.int("MAX_CARDS_PER_MATERIAL", default=60)
 
+# Leitner spaced repetition: a card in box N is next due LEITNER_INTERVAL_DAYS[N - 1]
+# days after it was answered, counted in whole days from the start of that day (in
+# TIME_ZONE). There's one interval per box (flashcards.models.LEITNER_BOXES).
+LEITNER_INTERVAL_DAYS = [1, 2, 4, 8, 16]
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},

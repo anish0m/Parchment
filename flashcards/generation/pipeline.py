@@ -36,7 +36,9 @@ class PipelineResult:
 
 def replaceable_cards(material):
     """Generated cards that regenerating may replace: never edited, never studied."""
-    return material.flashcards.filter(is_generated=True, is_edited=False, box=1)
+    return material.flashcards.filter(
+        is_generated=True, is_edited=False, box=1, reviews__isnull=True
+    )
 
 
 def _generate(concepts, title):

@@ -9,6 +9,7 @@ from flashcards.generation.generators import CardDraft, ClaudeGenerator, Generat
 from flashcards.models import Flashcard
 from materials.models import Material
 from materials.services import create_material
+from study.scheduler import record_answer
 
 from .conftest import HTMX
 from .sample_notes import NOTES
@@ -88,6 +89,18 @@ def test_regenerating_keeps_edited_studied_and_hand_added_cards(material):
     # No new card duplicates the ones that were kept.
     studied_question = Flashcard.objects.get(pk=studied.pk).question
     assert material.flashcards.filter(question=studied_question).count() == 1
+
+
+def test_regenerating_keeps_a_missed_card(material):
+    """A card answered wrongly is back in box 1, but its review history must survive."""
+    card = material.flashcards.first()
+    record_answer(card, correct=False)
+    assert card.box == 1
+
+    pipeline.generate_flashcards(material)
+
+    assert Flashcard.objects.filter(pk=card.pk).exists()
+    assert card.reviews.count() == 1
 
 
 def test_claude_is_used_when_configured(settings, material, monkeypatch):

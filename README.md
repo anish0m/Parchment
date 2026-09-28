@@ -29,7 +29,8 @@ Parchment allows users to organize study materials by course, upload content as 
 - `Course` — belongs to a user, groups materials and flashcards
 - `Material` — an uploaded text or PDF source, with extracted raw text
 - `Flashcard` — a generated question/answer pair, tied to a course and source material, with a Leitner box level
-- `ReviewLog` — a record of each study attempt (correct/incorrect) used to drive spaced repetition
+- `ReviewLog` — a record of each study attempt (correct/incorrect, and the box move it caused) used to drive spaced repetition
+- `StudySession` — one sitting of reviews in a course, with running counts of cards reviewed and answered correctly
 
 ## Getting started
 
@@ -73,6 +74,7 @@ To skip the worker, set `Q_SYNC=True` in `.env`; uploads are then processed duri
 
 ```bash
 python manage.py seed_flashcards <username>   # a demo course with 60 sample cards (--count, --reset)
+python manage.py simulate_reviews <username>  # play out a week of reviews, then roll back (--days, --accuracy)
 pytest                        # run the test suite
 ruff check . && ruff format . # lint and format
 pre-commit install            # run lint/format on every commit
@@ -113,7 +115,23 @@ After an upload, a background worker (Django-Q2, using PostgreSQL as its queue) 
 4. **Question generation** (`generators.py`): an LLM (Gemini or Claude) writes up to 5 cards per concept from those chunks, using structured output so every card is a validated question, answer and source quote. The LLM also names each concept. If there's no API key, or the request fails, built-in rules write the cards instead: definition sentences become "What is X?" cards and key terms become fill-in-the-blanks.
 5. **Quality checks** (`quality.py`): empty, overlong and self-answering cards are dropped, along with exact and near duplicates, including duplicates of cards already in the course.
 
-The material's page shows each stage live and says which generator wrote the cards. **Regenerate cards** replaces only generated cards you haven't edited or studied; your own cards and edits are kept.
+The material's page shows each stage live and says which generator wrote the cards. **Regenerate cards** replaces only generated cards you haven't edited or reviewed; your own cards and edits are kept.
+
+### How reviews are scheduled
+
+`study/scheduler.py` runs a Leitner system with 5 boxes. Each answer goes through `record_answer(card, correct)`:
+
+| Box | Due again after |
+| --- | --- |
+| 1 | 1 day |
+| 2 | 2 days |
+| 3 | 4 days |
+| 4 | 8 days |
+| 5 | 16 days |
+
+A correct answer moves the card up one box (box 5 stays in box 5); a wrong one sends it back to box 1. Intervals count whole days from midnight on the day of the review, in `DJANGO_TIME_ZONE`: a card answered at any time today in box 2 is due from midnight the day after tomorrow. The box change, the new due date and a `ReviewLog` row are saved together in one transaction. The intervals live in the `LEITNER_INTERVAL_DAYS` setting, and a system check rejects a list that doesn't have one interval per box.
+
+`due_cards(course)` returns the cards due now, lowest box first and then the longest overdue. New cards are due as soon as they're made.
 
 ### Configuration
 
@@ -126,6 +144,7 @@ All settings come from environment variables (see `.env.example`):
 | `DJANGO_DEBUG` | `True` in dev, `False` in prod | |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1,0.0.0.0` in dev | Comma-separated |
 | `DJANGO_SETTINGS_MODULE` | `parchment.settings.dev` via `manage.py`, `.prod` in the Docker image | |
+| `DJANGO_TIME_ZONE` | `UTC` | Time zone for due dates: cards come due at midnight here, e.g. `Asia/Dhaka` |
 | `DJANGO_MEDIA_ROOT` | `./media` | Where uploaded PDFs are stored. Not served publicly: each PDF is served to its owner through the app |
 | `MATERIAL_MAX_UPLOAD_MB` | `20` | Largest PDF that can be uploaded |
 | `MATERIAL_MAX_PDF_PAGES` | `300` | Most pages a PDF can have |
