@@ -39,6 +39,9 @@ class TfidfEmbedder:
     name = "tfidf"
     MAX_DIMENSIONS = 100
 
+    def __init__(self, reduce=True):
+        self.reduce = reduce
+
     def encode(self, texts):
         from sklearn.decomposition import TruncatedSVD
         from sklearn.feature_extraction.text import TfidfVectorizer
@@ -52,7 +55,7 @@ class TfidfEmbedder:
         except ValueError:  # nothing but stop words
             return np.zeros((len(texts), 1), dtype=np.float32)
         dimensions = min(self.MAX_DIMENSIONS, len(texts) - 1, matrix.shape[1] - 1)
-        if dimensions >= 2:
+        if self.reduce and dimensions >= 2:
             # Identical texts have zero variance; sklearn's variance ratios then divide
             # by zero, which doesn't affect the vectors themselves.
             with np.errstate(divide="ignore", invalid="ignore"):

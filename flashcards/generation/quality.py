@@ -2,6 +2,8 @@
 
 import re
 
+from .embeddings import TfidfEmbedder
+
 MAX_QUESTION_CHARS = 400
 MAX_ANSWER_CHARS = 700
 DUPLICATE_SIMILARITY = 0.92
@@ -34,6 +36,10 @@ def filter_cards(drafts, embedder, existing_questions=()):
     if len(unique) < 2 and not existing_questions:
         return unique
 
+    if isinstance(embedder, TfidfEmbedder):
+        # LSA squeezes a few short questions into fewer dimensions than they need,
+        # making unrelated ones look alike; plain word overlap is the honest test.
+        embedder = TfidfEmbedder(reduce=False)
     existing = list(existing_questions)
     vectors = embedder.encode(existing + [card.question for card in unique])
     if vectors.shape[1] == 0:
