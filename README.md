@@ -13,6 +13,7 @@ Parchment allows users to organize study materials by course, upload content as 
 - **ML-generated flashcards** — materials are chunked, embedded, and clustered by concept before generating question/answer pairs, so cards reflect ideas rather than isolated sentences
 - **Spaced repetition** — a Leitner-box system resurfaces missed cards more frequently and pushes mastered cards further out
 - **Study sessions** — a simple flip-card interface per course, with progress tracked across sessions
+- **REST API** — everything the web app does, with token auth and OpenAPI docs at `/api/docs/`
 
 ## Tech Stack
 
@@ -31,6 +32,23 @@ Parchment allows users to organize study materials by course, upload content as 
 - `Flashcard` — a generated question/answer pair, tied to a course and source material, with a Leitner box level
 - `ReviewLog` — a record of each study attempt (correct/incorrect, and the box move it caused) used to drive spaced repetition
 - `StudySession` — one sitting of reviews in a course, with running counts of cards reviewed and answered correctly
+
+## Architecture
+
+```
+browser ──HTTPS──▶ reverse proxy ──▶ web: gunicorn + Django ──────────▶ PostgreSQL
+                                      ├─ HTML pages (HTMX, Alpine.js)    ├─ app data
+                                      ├─ REST API (/api/v1/)             ├─ task queue (Django-Q2)
+                                      └─ static files (WhiteNoise)       └─ rate-limit cache
+                                                                            ▲
+                          worker: Django-Q2 cluster ─── picks up tasks ─────┘
+                            └─ PDF text extraction → chunk → embed → cluster → generate cards
+```
+
+- **One database does three jobs.** PostgreSQL holds the data, the background task queue and, in production, the cache that rate limits are counted in. There is no Redis to run.
+- **The web process never does ML.** Saving a material queues a task after the transaction commits; the worker extracts the text and generates cards while the page polls for progress. The embedding model loads once per worker process.
+- **Uploads live on a volume shared by web and worker**, and are never served publicly: each PDF is streamed to its owner by a view that checks ownership.
+- **Every query is scoped to the signed-in user**, in the pages and the API alike, so another user's ids return 404.
 
 ## Getting started
 
@@ -75,12 +93,12 @@ To skip the worker, set `Q_SYNC=True` in `.env`; uploads are then processed duri
 ```bash
 python manage.py seed_flashcards <username>   # a demo course with 60 sample cards (--count, --reset)
 python manage.py simulate_reviews <username>  # play out a week of reviews, then roll back (--days, --accuracy)
-pytest                        # run the test suite
+pytest                        # run the test suite (pytest --cov for coverage)
 ruff check . && ruff format . # lint and format
 pre-commit install            # run lint/format on every commit
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `check --deploy`, and the tests against PostgreSQL.
+CI (`.github/workflows/ci.yml`) runs lint and formatting, `manage.py check`, a check for missing migrations, OpenAPI schema validation, a production `check --deploy`, and the tests against PostgreSQL with coverage (the build fails below 90%).
 
 ### Project layout
 
@@ -92,9 +110,13 @@ CI (`.github/workflows/ci.yml`) runs lint, `manage.py check`, a production `chec
 | `materials/` | Uploads, PDF text extraction, and the background tasks (`materials/tasks.py`) |
 | `flashcards/` | `Flashcard` model, card pages, and the generation pipeline (`flashcards/generation/`) |
 | `study/` | Spaced repetition, review logs and study sessions |
+| `api/` | The REST API: serializers, viewsets and URLs under `/api/` |
 | `templates/` | Shared templates; `base.html` loads HTMX and Alpine.js |
 | `static/` | CSS and other static assets |
-| `docker/entrypoint.sh` | Runs migrations (and `collectstatic` outside dev) before starting the server |
+| `docker/entrypoint.sh` | Runs migrations and `createcachetable` (and `collectstatic` outside dev) before starting the server |
+| `docker/gunicorn.conf.py` | Gunicorn settings for production |
+| `docker/backup.sh` | Scheduled database and upload backups |
+| `docker-compose.prod.yml` | The production stack: web, worker, PostgreSQL and backups |
 
 ### How text is extracted from PDFs
 
@@ -144,6 +166,70 @@ Each course page has a **Study** panel with the number of cards due; the dashboa
 
 The **Progress** page shows cards per box, accuracy over the last 10 sessions, the study streak and the last study date.
 
+## REST API
+
+The API lives under `/api/v1/`. Interactive docs are at **`/api/docs/`** and the OpenAPI schema at `/api/schema/`. Every endpoint only sees the signed-in user's data.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/v1/auth/token/` | Exchange a username and password for an API token |
+| `GET/POST /api/v1/courses/`, `GET/PATCH/DELETE /api/v1/courses/{id}/` | Courses, with material, card and due counts |
+| `GET /api/v1/courses/{id}/due/` | Cards due now, in study order |
+| `GET/POST /api/v1/materials/`, `GET/DELETE /api/v1/materials/{id}/` | Materials (`?course=`); POST pasted text as JSON or a PDF as multipart |
+| `POST /api/v1/materials/{id}/regenerate/` | Regenerate a material's cards (409 while it's processing) |
+| `GET/POST /api/v1/flashcards/`, `GET/PATCH/DELETE /api/v1/flashcards/{id}/` | Cards (`?course=`, `?material=`, `?box=`, `?due=true`) |
+| `POST /api/v1/flashcards/{id}/review/` | Answer a card: `{"correct": true}`, optionally with a `session` id |
+| `GET /api/v1/reviews/` | Review history (`?course=`, `?flashcard=`, `?session=`) |
+
+```bash
+TOKEN=$(curl -s -X POST localhost:8000/api/v1/auth/token/ -d username=me -d password=secret | jq -r .token)
+curl -H "Authorization: Token $TOKEN" localhost:8000/api/v1/courses/1/due/
+curl -H "Authorization: Token $TOKEN" -F course=1 -F source_type=pdf -F file=@notes.pdf localhost:8000/api/v1/materials/
+curl -H "Authorization: Token $TOKEN" -H "Content-Type: application/json" -d '{"correct": true}' localhost:8000/api/v1/flashcards/42/review/
+```
+
+Lists are paginated (`?page=`, `?page_size=` up to 100). The browser's session cookie works too; with it, write requests need the CSRF token like any form. Uploads and card generation are rate limited per user (shared with the web pages) and answer `429` with a `Retry-After` header when the limit is reached.
+
+## Deployment
+
+`docker-compose.prod.yml` runs the production stack: **web** (gunicorn with WhiteNoise for static files), **worker** (the background task cluster), **db** (PostgreSQL 16) and **backup** (scheduled dumps).
+
+1. On a server with Docker, clone the repository and create `.env` from `.env.example`. At minimum set:
+   - `DJANGO_SECRET_KEY`: a long random string (`python -c "import secrets; print(secrets.token_urlsafe(50))"`)
+   - `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, e.g. `parchment.example.com` and `https://parchment.example.com`
+   - `POSTGRES_PASSWORD`, and `DATABASE_URL` with the same password and host `db`
+   - `EMAIL_URL` so password reset emails can be sent (the production settings always turn `DEBUG` off)
+   - optionally `GEMINI_API_KEY` or `ANTHROPIC_API_KEY`
+2. Start it: `docker compose -f docker-compose.prod.yml up -d --build`. The web container migrates the database and collects static files on start; the worker waits until web is healthy.
+3. Put a TLS-terminating reverse proxy (Caddy, nginx or a cloud load balancer) in front of port 8000 (`WEB_PORT` changes it) that sets `X-Forwarded-Proto`. Plain HTTP requests are redirected to HTTPS. Once HTTPS works, consider `DJANGO_SECURE_HSTS_SECONDS=31536000`.
+4. Create an admin account: `docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser`.
+
+To update, `git pull` and run the `up -d --build` command again.
+
+**Health.** `GET /healthz/` answers `{"status": "ok", "database": "ok"}`, or `503` when the database is unreachable. It skips the host and HTTPS checks so Docker can call it from inside the container; the web service's health check uses it.
+
+**Logs.** In production every log line is a JSON object (time, level, logger, message and, for request errors, method, path and user id), ready for a log collector; gunicorn writes access logs to stdout too. `DJANGO_LOG_FORMAT=text` switches to plain lines. `docker compose -f docker-compose.prod.yml logs -f web worker` follows them.
+
+**Sizing.** The worker loads the embedding model (about 1 GB of memory, capped by `WORKER_MEMORY`, default `2g`). Gunicorn runs `WEB_CONCURRENCY` workers (default 3).
+
+**Backups.** The backup service writes `parchment-db-<time>.dump` (a `pg_dump` custom-format dump) and `parchment-media-<time>.tar.gz` (the uploaded PDFs) to `./backups` every 24 hours (`BACKUP_INTERVAL_SECONDS`), keeping 7 days (`BACKUP_KEEP_DAYS`). Copy that folder off the server regularly. To take a backup now, or to restore one:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm backup once
+docker compose -f docker-compose.prod.yml exec -T db pg_restore -U parchment -d parchment --clean --if-exists --no-owner < backups/parchment-db-<time>.dump
+docker compose -f docker-compose.prod.yml run --rm --no-deps -v ./backups:/backups:ro --entrypoint tar web \
+  -xzf /backups/parchment-media-<time>.tar.gz -C /app/media
+```
+
+## Security
+
+- Every page, API endpoint and file download checks that the object belongs to the signed-in user; a test visits every URL that takes an id as another user and expects a 404.
+- CSRF protection covers forms, HTMX requests (the token is sent as a header) and session-authenticated API calls. Token-authenticated API calls don't use cookies.
+- Uploads are checked for type (`.pdf` and a `%PDF-` header), size and page count, and requests bigger than the upload limit are refused before they're read.
+- Uploads, card generation and failed sign-ins are rate limited.
+- A Content-Security-Policy header limits scripts to this site and jsDelivr, and the CDN scripts are pinned with subresource integrity hashes.
+- Production settings: `DEBUG` off, HTTPS redirect, secure and HttpOnly cookies, `nosniff`, `X-Frame-Options: DENY`, same-origin referrers. CI runs `manage.py check --deploy`.
+
 ### Configuration
 
 All settings come from environment variables (see `.env.example`):
@@ -171,7 +257,18 @@ All settings come from environment variables (see `.env.example`):
 | `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | |
 | `MAX_CONCEPTS_PER_MATERIAL` / `MAX_CARDS_PER_CONCEPT` / `MAX_CARDS_PER_MATERIAL` | `12` / `5` / `60` | Limits on how many concepts and cards are made |
 | `Q_WORKERS` / `Q_TIMEOUT` / `Q_SYNC` | `2` / `900` / `False` | Worker processes, seconds a task may run, and whether to run tasks inline without a worker |
+| `RATE_LIMIT_UPLOADS` / `RATE_LIMIT_GENERATION` | `30/hour` / `20/hour` | Per user, web and API together |
+| `RATE_LIMIT_LOGIN` | `30/hour` | Failed sign-ins per IP address |
+| `RATE_LIMIT_USER` / `RATE_LIMIT_ANON` | `2000/hour` / `60/hour` | All API requests |
+| `CACHE_URL` | memory (dev), `dbcache://parchment_cache` (prod) | Where rate-limit counts are kept |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | — | Comma-separated, e.g. `https://parchment.example.com` |
+| `DJANGO_SECURE_SSL_REDIRECT` / `DJANGO_SECURE_HSTS_SECONDS` | `True` / `0` | Production HTTPS redirect and HSTS |
+| `DJANGO_CSP` | see `settings/base.py` | Content-Security-Policy header; empty turns it off |
+| `DJANGO_LOG_FORMAT` / `DJANGO_LOG_LEVEL` | `text` (dev), `json` (prod) / `INFO` | |
+| `WEB_CONCURRENCY` / `GUNICORN_TIMEOUT` | `3` / `120` | Gunicorn workers and request timeout (seconds) |
+| `WEB_PORT` / `WORKER_MEMORY` | `8000` / `2g` | Production Compose: published port and worker memory cap |
+| `BACKUP_INTERVAL_SECONDS` / `BACKUP_KEEP_DAYS` / `BACKUP_DIR` | `86400` / `7` / `./backups` | Production backups |
 
 ## License
 
-MIT
+MIT: see [LICENSE](LICENSE).

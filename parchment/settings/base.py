@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "parchment.middleware.HealthCheckMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "parchment.middleware.ContentSecurityPolicyMiddleware",
     "parchment.middleware.MaxRequestSizeMiddleware",
@@ -211,9 +212,16 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
 }
 
+# DJANGO_LOG_FORMAT: "text" (readable, the default in development) or "json" (one
+# object per line for log collectors, the default in production).
+LOG_FORMAT = env("DJANGO_LOG_FORMAT", default="text")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "formatters": {
+        "text": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+        "json": {"()": "parchment.logging.JsonFormatter"},
+    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": LOG_FORMAT}},
     "root": {"handlers": ["console"], "level": env("DJANGO_LOG_LEVEL", default="INFO")},
 }

@@ -52,3 +52,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db.ruff_cache/
+
+# Database and upload backups (docker-compose.prod.yml)
+backups/

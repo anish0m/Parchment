@@ -1,6 +1,10 @@
-from django.db import connection
+import logging
+
+from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+
+logger = logging.getLogger(__name__)
 
 
 def home(request):
@@ -10,10 +14,14 @@ def home(request):
 
 
 def healthz(request):
-    """Liveness check used by Docker: confirms the app can reach the database."""
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT 1")
-    return JsonResponse({"status": "ok"})
+    """Health check used by Docker and load balancers: can the app reach the database?"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except DatabaseError:
+        logger.exception("Health check failed: database unreachable")
+        return JsonResponse({"status": "error", "database": "unreachable"}, status=503)
+    return JsonResponse({"status": "ok", "database": "ok"})
 
 
 def csrf_failure(request, reason=""):

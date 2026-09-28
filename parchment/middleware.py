@@ -3,6 +3,24 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 
 
+class HealthCheckMiddleware:
+    """Answers /healthz/ before host checks and the HTTPS redirect.
+
+    Docker's health check calls http://localhost:8000/healthz/ from inside the
+    container, which the production ALLOWED_HOSTS and SSL redirect would refuse.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path == "/healthz/" and request.method in ("GET", "HEAD"):
+            from .views import healthz
+
+            return healthz(request)
+        return self.get_response(request)
+
+
 class MaxRequestSizeMiddleware:
     """Refuses request bodies bigger than any upload we accept, before they're read.
 

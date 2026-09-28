@@ -16,6 +16,10 @@ jobs:
       - run: pip install "ruff>=0.15,<0.17"
       - run: ruff check .
       - run: ruff format --check .
+      - name: Validate the production Compose file
+        run: cp .env.example .env && POSTGRES_PASSWORD=ci docker compose -f docker-compose.prod.yml config --quiet
+      - name: Check the shell scripts
+        run: sh -n docker/entrypoint.sh && sh -n docker/backup.sh
 
   test:
     runs-on: ubuntu-latest
