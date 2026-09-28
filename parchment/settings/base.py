@@ -162,6 +162,8 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "courses:list"
 LOGOUT_REDIRECT_URL = "home"
 
+CSRF_FAILURE_VIEW = "parchment.views.csrf_failure"
+
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="Parchment <noreply@localhost>")
 
 # Rate limits and other short-lived data. Per-process memory by default; production

@@ -334,3 +334,26 @@ kbd {
 .bar-fill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
 .bar-value { flex: 0 0 auto; min-width: 3ch; font-variant-numeric: tabular-nums; }
 .bar-table tbody tr + tr > * { border-top: 1px solid var(--border); }
+
+/* Accessibility and loading states */
+.skip-link {
+  position: absolute; left: 16px; top: -48px; z-index: 100;
+  padding: 8px 12px; background: var(--surface); border: 2px solid var(--accent); border-radius: 6px;
+}
+.skip-link:focus { top: 8px; }
+main:focus { outline: none; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.nav a[aria-current="page"] { font-weight: 600; }
+/* While HTMX waits for the server, the control that sent the request looks busy. */
+button.htmx-request, .button.htmx-request, form.htmx-request button[type="submit"] { opacity: 0.6; cursor: progress; }
+
+.error-page { max-width: 560px; padding: 48px 0; }
+.error-code { margin: 0; color: var(--muted); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.08em; }
+.error-page h1 { margin-top: 4px; }
+/* Focused by script so keyboard users land in the right place; no ring needed. */
+.flip-card:focus-visible { outline: none; }
+.study-summary:focus-visible, main:focus-visible { outline: none; }

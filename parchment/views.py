@@ -14,3 +14,8 @@ def healthz(request):
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1")
     return JsonResponse({"status": "ok"})
+
+
+def csrf_failure(request, reason=""):
+    """A friendly page for a failed CSRF check (usually an expired or cached form)."""
+    return render(request, "403_csrf.html", status=403)

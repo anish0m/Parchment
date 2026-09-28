@@ -1,0 +1,21 @@
+{% load static %}<!doctype html>
+{# Rendered without a request context, so it avoids anything that needs the user or the database. #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Something went wrong · Parchment</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="site-header"><nav class="nav container"><a class="brand" href="/">Parchment</a></nav></header>
+  <main class="container">
+    <section class="error-page">
+      <p class="error-code">500</p>
+      <h1>Something went wrong on our side</h1>
+      <p>The error has been logged. Please try again in a moment; your cards and progress are safe.</p>
+      <p class="actions"><a class="button" href="/">Go to the home page</a></p>
+    </section>
+  </main>
+</body>
+</html>

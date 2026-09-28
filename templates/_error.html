@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{% block error_title %}{% endblock %} · Parchment{% endblock %}
+{% block content %}
+  <section class="error-page">
+    <p class="error-code">{% block code %}{% endblock %}</p>
+    <h1>{% block heading %}{% endblock %}</h1>
+    <p>{% block message %}{% endblock %}</p>
+    <p class="actions">
+      <a class="button" href="{% if user.is_authenticated %}{% url 'courses:list' %}{% else %}{% url 'home' %}{% endif %}">{% if user.is_authenticated %}Go to your courses{% else %}Go to the home page{% endif %}</a>
+    </p>
+  </section>
+{% endblock %}
