@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Progress · {{ course.name }} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{{ course.get_absolute_url }}">← {{ course.name }}</a></p>
+  <div class="page-header">
+    <h1>Progress</h1>
+    {% if card_count %}
+      <form method="post" action="{% url 'study:start' course.pk %}" class="actions">
+        {% csrf_token %}
+        {% if due_now %}
+          <button type="submit" class="button">Study {{ due_now }} due card{{ due_now|pluralize }}</button>
+        {% else %}
+          <input type="hidden" name="mode" value="practice">
+          <button type="submit" class="button secondary">Study anyway</button>
+        {% endif %}
+      </form>
+    {% endif %}
+  </div>
+
+  {% if not card_count %}
+    <p class="empty-state">No flashcards yet, so there's no progress to show. <a href="{{ course.get_absolute_url }}">Add a material</a> to get started.</p>
+  {% else %}
+    <dl class="stat-grid">
+      <div class="stat"><dt>Cards</dt><dd>{{ card_count }}</dd></div>
+      <div class="stat"><dt>Due now</dt><dd>{{ due_now }}</dd></div>
+      <div class="stat"><dt title="Cards in the top box">Mastered</dt><dd>{{ mastered }}</dd></div>
+      <div class="stat"><dt>Accuracy</dt><dd>{% if accuracy is not None %}{{ accuracy }}%{% else %}—{% endif %}</dd></div>
+      <div class="stat"><dt>Streak</dt><dd>{{ streak }} day{{ streak|pluralize }}</dd></div>
+      <div class="stat"><dt>Last studied</dt><dd>{% if last_studied %}{{ last_studied|naturalday:"M j" }}{% else %}Never{% endif %}</dd></div>
+    </dl>
+    {% if not due_now and next_due %}
+      <p class="muted">Nothing is due. The next card is due {{ next_due|naturalday:"l, M j" }}.</p>
+    {% endif %}
+
+    <section class="panel">
+      <h2 class="panel-title">Cards per box</h2>
+      <table class="bar-table">
+        <caption class="sr-only">Number of cards in each Leitner box</caption>
+        <thead class="sr-only"><tr><th scope="col">Box</th><th scope="col">Cards</th></tr></thead>
+        <tbody>
+          {% for row in boxes %}
+            <tr>
+              <th scope="row">
+                Box {{ row.box }}
+                <span class="muted small">every {% if row.interval_days == 1 %}day{% else %}{{ row.interval_days }} days{% endif %}</span>
+              </th>
+              <td><div class="bar-cell">
+                <span class="bar" title="Box {{ row.box }}: {{ row.count }} card{{ row.count|pluralize }} ({{ row.share }}%)">
+                  <span class="bar-fill" style="width: {{ row.width }}%"></span>
+                </span>
+                <span class="bar-value">{{ row.count }}</span>
+              </div></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="muted small">Correct answers move a card up a box, so it comes back less often. A miss sends it back to box 1.</p>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Recent sessions</h2>
+      {% if sessions %}
+        <table class="bar-table">
+          <caption class="sr-only">Accuracy in your {{ sessions|length }} most recent sessions</caption>
+          <thead>
+            <tr><th scope="col">Date</th><th scope="col">Correct <span class="muted small">(of cards reviewed)</span></th></tr>
+          </thead>
+          <tbody>
+            {% for row in sessions %}
+              <tr>
+                <th scope="row">
+                  {{ row.session.started_at|naturalday:"M j" }}
+                  <span class="muted small">{{ row.session.started_at|time:"H:i" }}{% if row.session.mode == "practice" %} · practice{% endif %}</span>
+                </th>
+                <td><div class="bar-cell">
+                  <span class="bar" title="{{ row.session.cards_correct }} of {{ row.session.cards_reviewed }} correct">
+                    <span class="bar-fill" style="width: {{ row.accuracy }}%"></span>
+                  </span>
+                  <span class="bar-value">{{ row.accuracy }}% <span class="muted small">of {{ row.session.cards_reviewed }}</span></span>
+                </div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No study sessions yet. Your accuracy will show up here after your first one.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

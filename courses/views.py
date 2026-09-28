@@ -1,14 +1,16 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Value
+from django.db.models import Count, Q, Value
 from django.db.models.functions import Lower
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
 from materials.views import material_list_context
 from parchment.htmx import is_htmx, paginate, wants_fragment
+from study.views import study_panel_context
 
 from .forms import CourseForm
 from .models import Course
@@ -39,6 +41,11 @@ def with_counts(queryset):
     return queryset.annotate(
         material_count=Count("materials", distinct=True),
         card_count=Count("flashcards", distinct=True),
+        due_count=Count(
+            "flashcards",
+            filter=Q(flashcards__next_review_at__lte=timezone.now()),
+            distinct=True,
+        ),
     ).order_by(Lower("name"))
 
 
@@ -115,7 +122,7 @@ class CourseDetailView(OwnedCourseMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(material_list_context(self.object, self.request.GET.get("page")))
-        context["card_count"] = self.object.flashcards.count()
+        context.update(study_panel_context(self.object))
         return context
 
 

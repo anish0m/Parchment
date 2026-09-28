@@ -248,3 +248,89 @@ select, .form select {
 @media (prefers-reduced-motion: reduce) {
   .status-pending, .status-processing, .status-generating { animation: none; }
 }
+
+/* Study */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+kbd {
+  display: inline-block; min-width: 1.5em; padding: 0 5px; margin-left: 6px;
+  border: 1px solid currentColor; border-radius: 4px; font: inherit; font-size: 0.75em;
+  line-height: 1.5; text-align: center; opacity: 0.75;
+}
+.course-study { margin: 0; }
+.study-panel .study-cta { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+.study-cta form { margin: 0; }
+.study-due { margin: 0; }
+.study-due strong { font-size: 1.4rem; }
+
+.study-stage { max-width: 720px; margin: 0 0 48px; }
+.study { display: flex; flex-direction: column; gap: 12px; }
+.study-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.study-meta form { margin: 0; }
+.study-progress { height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.study-progress span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s; }
+
+/* The flip card. Both faces sit in the same grid cell, so the card is as tall as
+   its longer side and grows with the text instead of clipping it. */
+.flip-card { perspective: 1400px; cursor: pointer; outline: none; border-radius: 12px; }
+.flip-card:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.flip-inner { display: grid; transform-style: preserve-3d; transition: transform 0.45s ease; }
+.flip-card.is-flipped .flip-inner { transform: rotateY(180deg); }
+.flip-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  min-height: clamp(220px, 40vh, 340px);
+  display: flex; flex-direction: column; justify-content: center; gap: 12px;
+  padding: clamp(16px, 4vw, 28px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.06);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back { transform: rotateY(180deg); border-color: var(--accent); }
+.face-label { margin: 0; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.face-text { margin: 0; font-size: clamp(1.1rem, 2.6vw, 1.4rem); line-height: 1.45; }
+.face-hint { margin: 0; margin-top: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner, .study-progress span { transition: none; }
+}
+
+/* The answer area keeps one height whether it shows one button or two. */
+.study-actions { min-height: 48px; }
+.study-actions .button { width: 100%; min-height: 48px; font-size: 1.05rem; }
+.answer-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.answer-buttons form { margin: 0; }
+.answer-missed { background: transparent; color: var(--error); border-color: var(--error); }
+.answer-got { background: var(--success); border-color: var(--success); color: var(--bg); }
+.study-keys { margin: 0; text-align: center; }
+@media (hover: none) and (pointer: coarse) {
+  .study-keys, .study-actions kbd { display: none; }
+}
+
+.study-summary { outline: none; }
+.summary-title { margin: 0 0 16px; }
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.stat { min-width: 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.stat dt { color: var(--muted); font-size: 0.85rem; }
+.stat dd { margin: 0; font-size: 1.5rem; font-weight: 600; }
+
+/* Horizontal bar charts, laid out as tables so the numbers are readable without the bars. */
+.bar-table { width: 100%; border-collapse: collapse; }
+.bar-table th, .bar-table td { padding: 8px 0; vertical-align: middle; text-align: left; }
+.bar-table thead th { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+.bar-table tbody th { font-weight: 600; white-space: nowrap; padding-right: 16px; width: 1%; }
+.bar-table tbody th .small { display: block; font-weight: 400; }
+.bar-cell { display: flex; align-items: center; gap: 10px; }
+.bar { flex: 1 1 auto; min-width: 40px; height: 14px; }
+.bar-fill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bar-value { flex: 0 0 auto; min-width: 3ch; font-variant-numeric: tabular-nums; }
+.bar-table tbody tr + tr > * { border-top: 1px solid var(--border); }

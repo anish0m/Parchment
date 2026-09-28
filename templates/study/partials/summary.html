@@ -1,0 +1,37 @@
+{% load humanize %}
+<div class="study-summary" tabindex="-1" x-data x-init="$nextTick(() => $el.focus({ preventScroll: true }))">
+  <h2 class="summary-title">{% if finished_early %}Session ended{% else %}Session complete{% endif %}</h2>
+  {% if summary.reviewed %}
+    <dl class="stat-grid">
+      <div class="stat"><dt>Reviewed</dt><dd>{{ summary.reviewed }}</dd></div>
+      <div class="stat"><dt>Correct</dt><dd>{{ summary.accuracy }}%</dd></div>
+      <div class="stat"><dt>Moved up a box</dt><dd>{{ summary.promoted }}</dd></div>
+      <div class="stat"><dt>Back to box 1</dt><dd>{{ summary.demoted }}</dd></div>
+    </dl>
+  {% else %}
+    <p class="muted">You didn't answer any cards this time.</p>
+  {% endif %}
+
+  <p>
+    {% if summary.due_now %}
+      {{ summary.due_now }} card{{ summary.due_now|pluralize }} {{ summary.due_now|pluralize:"is,are" }} still due.
+    {% elif summary.next_due %}
+      All caught up. The next card is due {{ summary.next_due|naturalday:"l, M j" }}.
+    {% else %}
+      All caught up.
+    {% endif %}
+  </p>
+
+  <div class="actions">
+    {% with course=session.course %}
+      {% if summary.due_now %}
+        <form method="post" action="{% url 'study:start' course.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="button">Keep studying</button>
+        </form>
+      {% endif %}
+      <a class="button{% if summary.due_now %} secondary{% endif %}" href="{% url 'study:progress' course.pk %}">See progress</a>
+      <a href="{{ course.get_absolute_url }}">Back to course</a>
+    {% endwith %}
+  </div>
+</div>

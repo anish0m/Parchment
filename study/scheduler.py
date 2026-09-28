@@ -17,6 +17,9 @@ from flashcards.models import LEITNER_BOXES, Flashcard
 
 from .models import ReviewLog, StudySession
 
+# How many cards an extra-practice session ("study anyway") shows.
+PRACTICE_SESSION_CARDS = 20
+
 
 class SessionError(ValueError):
     """The session can't take this answer (another course, or already ended)."""
@@ -101,10 +104,51 @@ def due_cards(course, limit=None, now=None):
     return cards[:limit] if limit is not None else cards
 
 
-def start_session(course, now=None):
-    return StudySession.objects.create(
-        user=course.owner, course=course, started_at=now or timezone.now()
-    )
+def start_session(course, mode=StudySession.Mode.DUE, now=None):
+    """Begin a study session, closing any the user left open in this course."""
+    now = now or timezone.now()
+    for stale in StudySession.objects.filter(course=course, ended_at__isnull=True):
+        last_review = stale.reviews.order_by("-reviewed_at").first()
+        end_session(stale, now=last_review.reviewed_at if last_review else stale.started_at)
+    return StudySession.objects.create(user=course.owner, course=course, mode=mode, started_at=now)
+
+
+def _queue(session, now):
+    """Cards the session may still show, best first."""
+    cards = session.course.flashcards.exclude(reviews__session=session)
+    if session.mode == StudySession.Mode.PRACTICE:
+        return cards.order_by("next_review_at", "box", "pk")
+    return cards.filter(next_review_at__lte=now).order_by("box", "next_review_at", "pk")
+
+
+def remaining_count(session, now=None):
+    """How many more cards the session will show."""
+    if not session.is_active:
+        return 0
+    count = _queue(session, now or timezone.now()).count()
+    if session.mode == StudySession.Mode.PRACTICE:
+        count = min(count, max(PRACTICE_SESSION_CARDS - session.cards_reviewed, 0))
+    return count
+
+
+def next_card(session, now=None):
+    """The next card to show, or None when the session has nothing left.
+
+    Each card is shown once per session: an answered card is rescheduled for a
+    later day, and a missed one comes back tomorrow from box 1.
+    """
+    if not session.is_active:
+        return None
+    if (
+        session.mode == StudySession.Mode.PRACTICE
+        and session.cards_reviewed >= PRACTICE_SESSION_CARDS
+    ):
+        return None
+    return _queue(session, now or timezone.now()).first()
+
+
+def already_answered(session, card):
+    return session.reviews.filter(flashcard=card).exists()
 
 
 def end_session(session, now=None):

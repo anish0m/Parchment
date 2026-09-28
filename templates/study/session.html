@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Study · {{ session.course.name }} · Parchment{% endblock %}
+
+{% block content %}
+  <p class="breadcrumb"><a href="{{ session.course.get_absolute_url }}">← {{ session.course.name }}</a></p>
+  <h1>{% if session.mode == "practice" %}Extra practice{% else %}Study{% endif %}</h1>
+  <div id="study-stage" class="study-stage">
+    {% include "study/partials/stage.html" %}
+  </div>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 from courses.models import Course
@@ -11,10 +12,16 @@ BOX_IN_RANGE = {"gte": 1, "lte": LEITNER_BOXES}
 class StudySession(models.Model):
     """One sitting of reviews in a course; the counts are kept up to date as answers come in."""
 
+    class Mode(models.TextChoices):
+        DUE = "due", "Due cards"
+        # "Study anyway": nothing is due, so review the cards coming due soonest.
+        PRACTICE = "practice", "Extra practice"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="study_sessions"
     )
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="study_sessions")
+    mode = models.CharField(max_length=10, choices=Mode.choices, default=Mode.DUE)
     started_at = models.DateTimeField(default=timezone.now)
     ended_at = models.DateTimeField(null=True, blank=True)
     cards_reviewed = models.PositiveIntegerField(default=0)
@@ -32,6 +39,9 @@ class StudySession(models.Model):
 
     def __str__(self):
         return f"{self.course} · {self.started_at:%Y-%m-%d %H:%M}"
+
+    def get_absolute_url(self):
+        return reverse("study:session", args=[self.pk])
 
     @property
     def is_active(self):

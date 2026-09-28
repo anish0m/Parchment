@@ -133,6 +133,17 @@ A correct answer moves the card up one box (box 5 stays in box 5); a wrong one s
 
 `due_cards(course)` returns the cards due now, lowest box first and then the longest overdue. New cards are due as soon as they're made.
 
+### Studying
+
+Each course page has a **Study** panel with the number of cards due; the dashboard shows it on every course. **Study now** starts a session that goes through the due cards one at a time:
+
+- Click the card or press **Space** to flip it, then answer **Missed it** (**1** or **←**) or **Got it** (**2** or **→**). Each answer is posted with HTMX and the next card slides in without a page reload.
+- Each card appears once per session. A missed card goes back to box 1 and comes back tomorrow.
+- When nothing is due, **Study anyway** starts an extra-practice session of up to 20 cards, soonest due first. These answers move cards between boxes like any other.
+- The session ends by itself when the cards run out, or with **End session**, and shows a summary: cards reviewed, % correct, cards moved up or back to box 1, and when the next card is due.
+
+The **Progress** page shows cards per box, accuracy over the last 10 sessions, the study streak and the last study date.
+
 ### Configuration
 
 All settings come from environment variables (see `.env.example`):
