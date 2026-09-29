@@ -1,12 +1,17 @@
-<li class="flashcard editing" id="card-{{ card.pk }}">
-  <form class="form form-wide" method="post" action="{% url 'flashcards:update' card.pk %}"
-        hx-post="{% url 'flashcards:update' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">
-    {% csrf_token %}
-    {{ form.as_div }}
-    <div class="actions">
-      <button type="submit" class="button">Save</button>
-      <button type="button" class="link"
-              hx-get="{% url 'flashcards:detail' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">Cancel</button>
-    </div>
-  </form>
-</li>
+{# The edit form, shown in the edit modal. Saving replaces the card in the list. #}
+<div class="modal-head">
+  <div>
+    <div class="eyebrow">Box {{ card.box }}{% if card.concept_label %} · {{ card.concept_label }}{% endif %}</div>
+    <h2>Edit flashcard</h2>
+  </div>
+  <button type="button" class="close" data-close-modal="card-edit-modal" aria-label="Close">×</button>
+</div>
+<form class="form" method="post" action="{% url 'flashcards:update' card.pk %}"
+      hx-post="{% url 'flashcards:update' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">
+  {% csrf_token %}
+  {{ form.as_div }}
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="button" class="btn btn-ghost" data-close-modal="card-edit-modal">Cancel</button>
+  </div>
+</form>

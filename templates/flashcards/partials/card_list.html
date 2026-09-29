@@ -1,28 +1,30 @@
 <div id="card-list" class="list-region"{% if oob %} hx-swap-oob="true"{% endif %}>
-  {% if page_obj.paginator.count %}
-    <p class="muted small" role="status">
-      {{ page_obj.paginator.count }} card{{ page_obj.paginator.count|pluralize }}{% if is_filtered %} match these filters{% endif %}
-    </p>
-  {% endif %}
+  <div class="section-head">
+    <div>
+      <h2>{{ page_obj.paginator.count }} card{{ page_obj.paginator.count|pluralize }}</h2>
+      <p class="muted small" role="status">{% if is_filtered %}Matching these filters.{% else %}Grouped by concept.{% endif %}</p>
+    </div>
+  </div>
 
   {% regroup cards by concept_label as groups %}
   {% for group in groups %}
     <section class="concept-group">
-      <h2 class="concept-title">{{ group.grouper|default:"No concept" }}</h2>
-      <ul class="card-list">
+      <h3 class="concept-title">{{ group.grouper|default:"No concept" }}</h3>
+      <ul class="list">
         {% for card in group.list %}
           {% include "flashcards/partials/card.html" %}
         {% endfor %}
       </ul>
     </section>
   {% empty %}
-    <p class="empty-state">
+    <div class="empty">
       {% if is_filtered %}
-        No cards match these filters.
+        <p>No cards match these filters.</p>
       {% else %}
-        No flashcards yet. Add one above; later they'll be generated from your materials.
+        <p><strong>No flashcards yet.</strong><br>Add a material to the course to generate them, or write your own.</p>
+        <div class="actions"><button type="button" class="btn btn-primary" data-open-modal="flashcard-modal">Add a flashcard</button></div>
       {% endif %}
-    </p>
+    </div>
   {% endfor %}
 
   {% include "partials/pagination.html" with target="card-list" %}

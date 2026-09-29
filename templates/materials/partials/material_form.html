@@ -1,0 +1,67 @@
+{% comment %}
+The add-material form: tabs choose between uploading a PDF and pasting text, so only
+one input shows at a time. In the modal (in_modal) it posts with HTMX and the reply
+replaces the modal's content (the form again with errors, or the processing view).
+{% endcomment %}
+{% with mode=form.source_type.value|default:"pdf" %}
+{% if in_modal %}
+  <div class="modal-head">
+    <div>
+      <div class="eyebrow">{{ course.name }}</div>
+      <h2>Add material</h2>
+      <p class="muted small">Choose a PDF or paste your notes.</p>
+    </div>
+    <button type="button" class="close" data-close-modal="material-modal" aria-label="Close">×</button>
+  </div>
+{% endif %}
+<form id="material-form" class="form" method="post" enctype="multipart/form-data" action="{% url 'materials:create' course.pk %}"
+      {% if in_modal %}hx-post="{% url 'materials:create' course.pk %}" hx-encoding="multipart/form-data"
+      hx-target="closest [data-modal-body]" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']"{% endif %}>
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {{ form.source_type.errors }}
+  <input type="hidden" name="source_type" value="{{ mode }}">
+
+  <div>
+    <div class="material-tabs" role="tablist" aria-label="How to add notes">
+      <button type="button" class="material-tab{% if mode == 'pdf' %} active{% endif %}" role="tab"
+              aria-selected="{% if mode == 'pdf' %}true{% else %}false{% endif %}" data-material-tab="pdf">Upload PDF</button>
+      <button type="button" class="material-tab{% if mode == 'text' %} active{% endif %}" role="tab"
+              aria-selected="{% if mode == 'text' %}true{% else %}false{% endif %}" data-material-tab="text">Paste text</button>
+    </div>
+
+    <div class="material-panel{% if mode == 'pdf' %} active{% endif %}" data-material-panel="pdf" role="tabpanel">
+      <label class="option file-drop">
+        <h3>Upload a PDF</h3>
+        <p>We'll extract and clean the text before generating cards. Up to {{ max_upload_mb }} MB and {{ max_pages }} pages; scanned pages can't be read yet.</p>
+        <span class="btn btn-secondary btn-small">Choose PDF</span>
+        {{ form.file }}
+        <div class="small muted" data-file-name style="margin-top: 8px">No file selected.</div>
+      </label>
+      {{ form.file.errors }}
+    </div>
+
+    <div class="material-panel{% if mode == 'text' %} active{% endif %}" data-material-panel="text" role="tabpanel">
+      <div class="option">
+        <h3><label for="{{ form.text.id_for_label }}">Paste your notes</label></h3>
+        <p>Add text directly without uploading a file.</p>
+        {{ form.text }}
+      </div>
+      {{ form.text.errors }}
+    </div>
+  </div>
+
+  {{ form.title.as_field_group }}
+
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">
+      <span class="when-idle">Add material</span><span class="when-busy">Uploading…</span>
+    </button>
+    {% if in_modal %}
+      <button type="button" class="btn btn-ghost" data-close-modal="material-modal">Cancel</button>
+    {% else %}
+      <a class="btn btn-ghost" href="{{ course.get_absolute_url }}">Cancel</a>
+    {% endif %}
+  </div>
+</form>
+{% endwith %}

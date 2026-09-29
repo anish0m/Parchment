@@ -1,12 +1,30 @@
-{% extends "base.html" %}
+{% extends "_skeleton.html" %}
+{% load static %}
 
-{% block content %}
-  <section class="hero">
-    <h1>Parchment</h1>
-    <p class="muted">Turn your notes into concept-organised flashcards and review them with spaced repetition.</p>
-    <p class="actions">
-      <a class="button" href="{% url 'signup' %}">Create an account</a>
-      <a href="{% url 'login' %}">Log in</a>
-    </p>
-  </section>
+{% block title %}Parchment · Your notes have more to say{% endblock %}
+
+{% block body %}
+  <main id="main" class="hero" tabindex="-1">
+    <button type="button" class="theme-toggle corner-theme" data-theme-toggle aria-label="Switch theme"><span data-theme-icon aria-hidden="true">☾</span></button>
+    <div class="hero-inner">
+      <section class="hero-copy">
+        {% include "partials/messages.html" %}
+        <img class="hero-logo" src="{% static 'img/logo.png' %}" alt="Parchment" width="82" height="82">
+        <div class="hero-kicker">Study materials, made memorable</div>
+        <h1>Your notes have more to say.</h1>
+        <p class="lead">Parchment turns your PDFs and notes into concept-organized flashcards, then helps you revisit them at the right time.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="{% url 'signup' %}">Create your account</a>
+          <a class="btn btn-secondary" href="{% url 'login' %}">Log in</a>
+        </div>
+        <p class="small muted hero-note">Concept-first generation · Leitner review · PDF &amp; text</p>
+      </section>
+      <section class="hero-art" aria-hidden="true">
+        <div class="orbit"></div>
+        <img class="hero-art-image" src="{% static 'img/landing.webp' %}" alt="" width="300" height="230">
+        <div class="feather">✦</div>
+        <i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i>
+      </section>
+    </div>
+  </main>
 {% endblock %}

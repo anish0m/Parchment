@@ -1,9 +1,9 @@
 {% if material.in_progress %}
-  <span id="material-status" class="status-line" role="status"
+  <span id="material-status" role="status"
         hx-get="{% url 'materials:status' material.pk %}" hx-trigger="every 2s" hx-swap="outerHTML">
     {% include "materials/partials/status_badge.html" %}
-    <span class="muted small">This page updates by itself.</span>
+    <span class="small">This page updates by itself.</span>
   </span>
 {% else %}
-  <span id="material-status" class="status-line">{% include "materials/partials/status_badge.html" %}</span>
+  <span id="material-status">{% include "materials/partials/status_badge.html" %}</span>
 {% endif %}

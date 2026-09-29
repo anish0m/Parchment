@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Case, IntegerField, Value, When
@@ -47,6 +49,7 @@ def card_list_context(course, params):
         "cards": page_obj.object_list,
         "page_obj": page_obj,
         "is_filtered": any(params.get(name) for name in ("material", "box")),
+        "materials": course.materials.order_by("title"),
     }
 
 
@@ -125,10 +128,19 @@ class FlashcardUpdateView(OwnedCardView):
     def post(self, request, pk):
         form = FlashcardForm(request.POST, instance=self.card, course=self.card.course)
         if not form.is_valid():
-            return self.render_form(form)
+            response = self.render_form(form)
+            if is_htmx(request):
+                # Errors go back into the modal, not into the card's place in the list.
+                response["HX-Retarget"] = "#card-edit-modal [data-modal-body]"
+                response["HX-Reswap"] = "innerHTML"
+            return response
         self.card = form.save()
         if is_htmx(request):
-            return self.render_card()
+            # The card replaces itself in the list and the edit modal closes.
+            response = self.render_card()
+            close = {"parchment:close-modal": {"id": "card-edit-modal"}}
+            response["HX-Trigger"] = json.dumps(close)
+            return response
         messages.success(request, "Card updated.")
         return redirect(cards_url(self.card.course))
 

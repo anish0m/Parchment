@@ -1,23 +1,57 @@
 {% extends "base.html" %}
 
 {% block title %}Flashcards · {{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-wide{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{{ course.get_absolute_url }}">← {{ course.name }}</a></p>
-  <h1>Flashcards</h1>
+  <a class="back" href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Study bank · {{ course.name }}</div>
+      <h1>Flashcards</h1>
+      <p class="lead">Cards come from materials that are ready. Materials still processing are listed, but their cards aren't ready yet.</p>
+    </div>
+    <button type="button" class="btn btn-primary" data-open-modal="flashcard-modal">＋ Add flashcard</button>
+  </div>
 
-  <details class="panel collapsible"{% if not page_obj.paginator.count and not is_filtered %} open{% endif %}>
-    <summary class="panel-title">Add a card</summary>
-    {% include "flashcards/partials/card_form.html" %}
-  </details>
-
-  <form id="card-filters" class="filters" method="get" action="{% url 'flashcards:list' course.pk %}"
+  <form id="card-filters" class="grid grid-2 filters" method="get" action="{% url 'flashcards:list' course.pk %}"
         hx-get="{% url 'flashcards:list' course.pk %}" hx-trigger="change"
         hx-target="#card-list" hx-swap="outerHTML" hx-indicator="#card-list" hx-push-url="true">
-    <label>Material {{ filter_form.material }}</label>
-    <label>Box {{ filter_form.box }}</label>
-    <noscript><button type="submit" class="button secondary">Filter</button></noscript>
+    <label>Material
+      <select name="material" id="filter_material" data-processing-aware data-current="{{ filter_form.material.value|default:'' }}">
+        <option value="">All materials</option>
+        <option value="none"{% if filter_form.material.value == "none" %} selected{% endif %}>Added by hand</option>
+        {% for material in materials %}
+          <option value="{{ material.pk }}"
+                  {% if filter_form.material.value == material.pk|stringformat:"s" %}selected{% endif %}
+                  {% if material.in_progress %}data-status-url="{% url 'materials:status' material.pk %}?view=modal"{% endif %}>
+            {{ material.title|truncatechars:70 }}{% if material.in_progress %} · Still processing{% elif material.status == "failed" %} · Failed{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Leitner box {{ filter_form.box }}</label>
+    <noscript><button type="submit" class="btn btn-secondary">Filter</button></noscript>
   </form>
 
-  {% include "flashcards/partials/card_list.html" %}
+  <section class="section">
+    {% include "flashcards/partials/card_list.html" %}
+  </section>
+{% endblock %}
+
+{% block modals %}
+  <div id="flashcard-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="flashcard-modal-title" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">Your card</div>
+          <h2 id="flashcard-modal-title">Add flashcard</h2>
+        </div>
+        <button type="button" class="close" data-close-modal="flashcard-modal" aria-label="Close">×</button>
+      </div>
+      {% include "flashcards/partials/card_form.html" %}
+    </div>
+  </div>
+  {% include "partials/modal_shell.html" with id="card-edit-modal" label="Edit flashcard" %}
+  {% include "partials/modal_shell.html" with id="processing-modal" label="Material processing" %}
 {% endblock %}

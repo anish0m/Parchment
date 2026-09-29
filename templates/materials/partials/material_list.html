@@ -1,10 +1,18 @@
-<div id="material-list" class="list-region">
-  <ul class="material-list">
-    {% for material in materials %}
-      {% include "materials/partials/material_row.html" %}
-    {% empty %}
-      <li class="empty-state">No materials yet. Add notes as pasted text or a PDF.</li>
-    {% endfor %}
-  </ul>
+<div id="material-list" class="list-region"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if materials %}
+    <ul class="list">
+      {% for material in materials %}
+        {% include "materials/partials/material_row.html" %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty">
+      <p><strong>No materials yet.</strong><br>Upload a PDF or paste your notes, and Parchment makes flashcards from them.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="{% url 'materials:create' course.pk %}"
+           data-open-modal="material-modal" data-modal-url="{% url 'materials:create' course.pk %}">Add your first material</a>
+      </div>
+    </div>
+  {% endif %}
   {% include "partials/pagination.html" with target="material-list" %}
 </div>

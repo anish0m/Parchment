@@ -13,26 +13,28 @@ PDF_HEADER_WINDOW = 1024
 class MaterialForm(forms.Form):
     source_type = forms.ChoiceField(
         choices=Material.SourceType.choices,
-        initial=Material.SourceType.TEXT,
+        initial=Material.SourceType.PDF,
         # x-model lets Alpine show the text box or the file picker to match.
-        widget=forms.RadioSelect(attrs={"x-model": "mode"}),
+        # Chosen with tabs in the template (a hidden input).
+        widget=forms.HiddenInput,
         label="Add notes as",
     )
     title = forms.CharField(
         max_length=200,
         required=False,
         help_text="Optional. Defaults to the file name or the first line of the text.",
+        widget=forms.TextInput(attrs={"placeholder": "Material title"}),
     )
     text = forms.CharField(
         required=False,
         strip=True,
-        widget=forms.Textarea(attrs={"rows": 12, "placeholder": "Paste your notes here…"}),
+        widget=forms.Textarea(attrs={"rows": 10, "placeholder": "Paste your notes here…"}),
         label="Notes",
     )
     file = forms.FileField(
         required=False,
         label="PDF file",
-        widget=forms.ClearableFileInput(attrs={"accept": ".pdf,application/pdf"}),
+        widget=forms.FileInput(attrs={"accept": ".pdf,application/pdf", "data-file-input": ""}),
     )
 
     def clean_text(self):

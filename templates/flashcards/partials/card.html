@@ -1,23 +1,22 @@
 <li class="flashcard" id="card-{{ card.pk }}">
-  <div class="card-body">
-    <p class="card-question">{{ card.question|linebreaksbr }}</p>
-    <p class="card-answer">{{ card.answer|linebreaksbr }}</p>
-    <div class="badges">
-      <span class="badge" title="Leitner box">Box {{ card.box }}</span>
-      {% if card.is_generated %}<span class="badge">Generated</span>{% endif %}
-      {% if card.material %}
-        <a class="badge badge-link" href="{{ card.material.get_absolute_url }}">{{ card.material.title|truncatechars:40 }}</a>
-      {% endif %}
-    </div>
+  <div class="meta">
+    <span class="badge badge-accent" title="Leitner box">Box {{ card.box }}</span>
+    {% if card.is_generated %}<span class="badge">Generated</span>{% else %}<span class="badge">Your card</span>{% endif %}
+    {% if card.is_edited %}<span class="badge">Edited</span>{% endif %}
+    {% if card.material %}
+      <a class="badge" href="{{ card.material.get_absolute_url }}">{{ card.material.title|truncatechars:40 }}</a>
+    {% endif %}
   </div>
-  <div class="card-actions">
-    <a href="{% url 'flashcards:update' card.pk %}"
-       hx-get="{% url 'flashcards:update' card.pk %}" hx-target="#card-{{ card.pk }}" hx-swap="outerHTML">Edit</a>
+  <p class="question">{{ card.question|linebreaksbr }}</p>
+  <div class="answer">{{ card.answer|linebreaksbr }}</div>
+  <div class="actions">
+    <a class="btn btn-soft btn-small" href="{% url 'flashcards:update' card.pk %}"
+       data-open-modal="card-edit-modal" data-modal-url="{% url 'flashcards:update' card.pk %}">Edit</a>
     <form method="post" action="{% url 'flashcards:delete' card.pk %}"
           hx-post="{% url 'flashcards:delete' card.pk %}" hx-target="#card-list" hx-swap="outerHTML"
-          hx-confirm="Delete this card?">
+          data-confirm="This card and its review history will be deleted." data-confirm-title="Delete this card?">
       {% csrf_token %}
-      <button type="submit" class="link danger">Delete</button>
+      <button type="submit" class="btn btn-danger btn-small">Delete</button>
     </form>
   </div>
 </li>

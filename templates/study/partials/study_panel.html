@@ -1,32 +1,27 @@
-{% load humanize %}
-<section id="study-panel" class="panel study-panel"
+{% load humanize course_tags %}
+{# The course page's "Study now" link and mastery ring (top right of the page head). #}
+<div id="study-panel" class="study-link"
   {% if generating and not card_count %}hx-get="{% url 'study:panel' course.pk %}" hx-trigger="every 5s" hx-swap="outerHTML"{% endif %}>
-  <div class="panel-header">
-    <h2 class="panel-title">Study</h2>
-    {% if card_count %}<a href="{% url 'study:progress' course.pk %}">Progress</a>{% endif %}
-  </div>
-  {% if not card_count %}
-    {% if generating %}
-      <p class="muted status-line"><span class="badge status-generating">Generating cards</span> Your flashcards will appear here when they're ready.</p>
-    {% else %}
-      <p class="muted">No flashcards yet. Add a material to generate some, or <a href="{% url 'flashcards:list' course.pk %}">write your own</a>.</p>
-    {% endif %}
-  {% elif due_count %}
-    <div class="study-cta">
-      <p class="study-due"><strong>{{ due_count }}</strong> card{{ due_count|pluralize }} due</p>
+  {% if card_count %}
+    <div class="study-link-text">
       <form method="post" action="{% url 'study:start' course.pk %}">
         {% csrf_token %}
-        <button type="submit" class="button">Study now</button>
+        {% if not due_count %}<input type="hidden" name="mode" value="practice">{% endif %}
+        <button type="submit" class="study-now">{% if due_count %}Study now{% else %}Study anyway{% endif %}</button>
       </form>
+      <p class="muted small">
+        {% if due_count %}<strong>{{ due_count }}</strong> card{{ due_count|pluralize }} due{% else %}Nothing due today.{% if next_due %} Next card due {{ next_due|naturalday:"M j" }}.{% endif %}{% endif %}
+      </p>
     </div>
+    {% with percent=box_average|mastery %}
+      <a class="mastery-ring" href="{% url 'study:progress' course.pk %}" style="--p: {{ percent }}"
+         title="{{ percent }}% mastered · view progress" aria-label="{{ percent }}% mastered. View progress">
+        <span aria-hidden="true">{{ percent }}%</span>
+      </a>
+    {% endwith %}
+  {% elif generating %}
+    <p class="muted small" role="status"><span class="badge status-generating">Generating cards</span><br>They will appear here when they're ready.</p>
   {% else %}
-    <div class="study-cta">
-      <p class="study-due">Nothing due today.{% if next_due %} <span class="muted">Next card due {{ next_due|naturalday:"M j" }}.</span>{% endif %}</p>
-      <form method="post" action="{% url 'study:start' course.pk %}">
-        {% csrf_token %}
-        <input type="hidden" name="mode" value="practice">
-        <button type="submit" class="button secondary">Study anyway</button>
-      </form>
-    </div>
+    <p class="muted small">No flashcards yet.</p>
   {% endif %}
-</section>
+</div>

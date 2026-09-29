@@ -1,28 +1,33 @@
-<li class="course-card" id="course-{{ course.pk }}">
-  <h2 class="course-name"><a href="{{ course.get_absolute_url }}">{{ course.name }}</a></h2>
+{% load course_tags humanize %}
+<li class="course-tile" id="course-{{ course.pk }}">
+  <div class="meta">
+    {% if show_activity and course.last_activity %}
+      <span class="badge badge-accent">Active {{ course.last_activity|naturaltime }}</span>
+    {% endif %}
+    {% if course.due_count %}
+      <span class="badge badge-accent">{{ course.due_count }} due</span>
+    {% elif course.card_count %}
+      <span class="badge">Nothing due today</span>
+    {% endif %}
+    <span>{{ course.material_count }} material{{ course.material_count|pluralize }} · {{ course.card_count }} card{{ course.card_count|pluralize }}</span>
+  </div>
+  <h3><a href="{{ course.get_absolute_url }}">{{ course.name }}</a></h3>
   {% if course.description %}
-    <p class="course-description">{{ course.description|truncatewords:25 }}</p>
+    <p class="muted small description">{{ course.description }}</p>
   {% endif %}
-  <p class="muted small">
-    {{ course.material_count }} material{{ course.material_count|pluralize }} · {{ course.card_count }} card{{ course.card_count|pluralize }} · Created {{ course.created_at|date:"M j, Y" }}
-  </p>
-  {% if course.due_count %}
-    <form method="post" action="{% url 'study:start' course.pk %}" class="course-study">
-      {% csrf_token %}
-      <button type="submit" class="button">Study {{ course.due_count }} due</button>
-    </form>
-  {% elif course.card_count %}
-    <p class="muted small course-study">Nothing due today</p>
+  {% if course.card_count %}
+    {% with percent=course.box_average|mastery %}
+      <div class="progress" role="img" aria-label="{{ percent }}% mastered"><span style="width: {{ percent }}%"></span></div>
+      <span class="muted small">{{ percent }}% mastered</span>
+    {% endwith %}
   {% endif %}
-  <div class="card-actions">
-    <a href="{% url 'courses:update' course.pk %}">Edit</a>
-    <form method="post" action="{% url 'courses:delete' course.pk %}"
-          hx-post="{% url 'courses:delete' course.pk %}"
-          hx-target="#course-list" hx-swap="outerHTML"
-          hx-confirm="Delete “{{ course.name }}” and everything in it?">
-      {% csrf_token %}
-      <input type="hidden" name="page" value="{{ page_obj.number|default:1 }}">
-      <button type="submit" class="link danger">Delete</button>
-    </form>
+  <div class="actions">
+    <a class="btn btn-primary btn-small" href="{{ course.get_absolute_url }}">Open</a>
+    {% if course.due_count %}
+      <form method="post" action="{% url 'study:start' course.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-small">Study {{ course.due_count }} due</button>
+      </form>
+    {% endif %}
   </div>
 </li>

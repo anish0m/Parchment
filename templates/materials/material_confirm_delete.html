@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}Delete {{ material.title }} · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-  <h1>Delete “{{ material.title }}”?</h1>
-  <p>This permanently deletes the material{% if material.is_pdf %} and its PDF{% endif %}. It can't be undone.</p>
-  <form method="post" class="actions">
+  <a class="back" href="{{ material.get_absolute_url }}">← {{ material.title }}</a>
+  <div class="eyebrow" style="margin-top: 16px">Delete material</div>
+  <h1 class="title-long">Delete “{{ material.title }}”?</h1>
+  <p class="lead">The material and its file are deleted. Flashcards made from it stay in the course.</p>
+  <form method="post" class="actions" style="margin-top: 24px">
     {% csrf_token %}
-    <button type="submit" class="button danger">Delete material</button>
-    <a href="{{ material.get_absolute_url }}">Cancel</a>
+    <button type="submit" class="btn btn-danger-solid">Delete material</button>
+    <a class="btn btn-ghost" href="{{ material.get_absolute_url }}">Cancel</a>
   </form>
 {% endblock %}

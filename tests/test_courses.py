@@ -45,15 +45,14 @@ def test_create_course(auth_client, user):
     assert response.url == course.get_absolute_url()
 
 
-def test_create_course_with_htmx_returns_fresh_form_and_list(auth_client, user):
+def test_create_course_from_the_modal_opens_the_new_course(auth_client, user):
     response = auth_client.post(reverse("courses:create"), {"name": "Physics"}, **HTMX)
 
-    assert response.status_code == 200
-    content = response.content.decode()
-    assert 'id="course-form"' in content
-    assert 'hx-swap-oob="true"' in content
-    assert "Physics" in content
-    assert Course.objects.filter(owner=user, name="Physics").exists()
+    course = Course.objects.get(owner=user, name="Physics")
+    assert response.status_code == 204
+    assert response["HX-Redirect"] == course.get_absolute_url()
+    page = auth_client.get(course.get_absolute_url())
+    assert "Created “Physics”" in page.content.decode()
 
 
 def test_create_course_with_htmx_shows_errors_in_form(auth_client):
@@ -231,15 +230,6 @@ def test_htmx_history_restore_gets_full_page(auth_client, user, make_course):
     )
 
     assert "<html" in response.content.decode()
-
-
-def test_htmx_create_shows_the_page_with_the_new_course(auth_client, user, make_course):
-    make_many(make_course, user, PER_PAGE)
-
-    response = auth_client.post(reverse("courses:create"), {"name": "Zoology"}, **HTMX)
-
-    assert response.context["page_obj"].number == 2
-    assert "Zoology" in response.content.decode()
 
 
 def test_htmx_delete_stays_on_the_current_page(auth_client, user, make_course):

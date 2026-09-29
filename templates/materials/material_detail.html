@@ -2,66 +2,82 @@
 {% load humanize %}
 
 {% block title %}{{ material.title }} · Parchment{% endblock %}
+{% block main_class %}page-wide{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{{ material.course.get_absolute_url }}">← {{ material.course.name }}</a></p>
-
-  <div class="page-header">
-    <h1>{{ material.title }}</h1>
+  <a class="back" href="{{ material.course.get_absolute_url }}">← {{ material.course.name }}</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Material</div>
+      <h1 class="title-long">{{ material.title }}</h1>
+      <div class="meta">
+        <span>{{ material.get_source_type_display }}</span>
+        {% if material.page_count %}<span>{{ material.page_count }} page{{ material.page_count|pluralize }}</span>{% endif %}
+        {% if material.raw_text %}<span>{{ material.word_count|intcomma }} word{{ material.word_count|pluralize }}</span>{% endif %}
+        <span>Added {{ material.created_at|date:"M j, Y, H:i" }}</span>
+        {% include "materials/partials/detail_status.html" %}
+      </div>
+      {% if material.is_pdf %}
+        <p class="small" style="margin: 10px 0 0"><a href="{% url 'materials:file' material.pk %}" target="_blank" rel="noopener">Open the original PDF{% if material.original_filename %} ({{ material.original_filename }}){% endif %}</a></p>
+      {% endif %}
+    </div>
     <div class="actions">
-      <a class="button danger" href="{% url 'materials:delete' material.pk %}">Delete</a>
+      {% if material.status == "ready" %}
+        {% include "materials/partials/regenerate_form.html" with label="Regenerate cards" confirm=True style="btn-soft" %}
+      {% endif %}
+      <form method="post" action="{% url 'materials:delete' material.pk %}"
+            data-confirm="“{{ material.title }}” and its file will be deleted. Flashcards made from it stay in the course."
+            data-confirm-title="Delete this material?">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
     </div>
   </div>
 
-  <div class="badges">
-    <span class="badge">{{ material.get_source_type_display }}</span>
-    {% include "materials/partials/detail_status.html" %}
-  </div>
-
-  <dl class="facts">
-    {% if material.is_pdf %}
-      <div><dt>File</dt><dd><a href="{% url 'materials:file' material.pk %}" target="_blank" rel="noopener">{{ material.original_filename|default:"Original PDF" }}</a></dd></div>
-      {% if material.page_count %}<div><dt>Pages</dt><dd>{{ material.page_count }}</dd></div>{% endif %}
-    {% endif %}
-    {% if material.raw_text %}<div><dt>Words</dt><dd>{{ material.word_count|intcomma }}</dd></div>{% endif %}
-    {% if not material.in_progress %}<div><dt>Flashcards</dt><dd><a href="{{ cards_url }}">{{ card_count }} card{{ card_count|pluralize }}</a></dd></div>{% endif %}
-    <div><dt>Added</dt><dd>{{ material.created_at|date:"M j, Y, H:i" }}</dd></div>
-  </dl>
-
-  {% if stalled %}
-    <section class="panel panel-error" role="alert">
-      <h2 class="panel-title">This is taking longer than expected</h2>
-      <p>Processing may have stopped. You can start it again.</p>
-      {% include "materials/partials/regenerate_form.html" with label="Try again" %}
-    </section>
-  {% elif material.status == "failed" %}
-    <section class="panel panel-error" role="alert">
+  {% if material.status == "failed" %}
+    <div class="notice notice-danger" role="alert">
       {% if material.raw_text %}
-        <h2 class="panel-title">We couldn't generate flashcards</h2>
+        <strong>We couldn't generate flashcards.</strong>
         <p>{{ material.error_message }}</p>
-        {% include "materials/partials/regenerate_form.html" with label="Try again" %}
+        <div class="actions" style="margin-top: 12px">{% include "materials/partials/regenerate_form.html" with label="Try again" style="btn-primary btn-small" %}</div>
       {% else %}
-        <h2 class="panel-title">We couldn't read this material</h2>
+        <strong>We couldn't read this material.</strong>
         <p>{{ material.error_message }}</p>
-        <p><a href="{% url 'materials:create' material.course.pk %}">Add it again</a> as pasted text or a different PDF.</p>
+        <p>Add it again as pasted text or a different PDF from <a href="{{ material.course.get_absolute_url }}">the course page</a>.</p>
       {% endif %}
-    </section>
-  {% elif material.status == "ready" %}
-    <section class="panel">
-      <div class="panel-header">
-        <h2 class="panel-title">Flashcards</h2>
-        {% include "materials/partials/regenerate_form.html" with label="Regenerate cards" confirm=True %}
+    </div>
+  {% endif %}
+
+  {% if material.status == "ready" %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Flashcards from this material</h2>
+          <p class="muted small">
+            {% if card_count %}{{ card_count }} card{{ card_count|pluralize }}.{% else %}No cards from this material yet.{% endif %}
+            {% if material.generation_note %}{{ material.generation_note }}{% endif %}
+          </p>
+        </div>
+        {% if card_count %}<a class="btn btn-primary" href="{{ cards_url }}">View all {{ card_count }} card{{ card_count|pluralize }}</a>{% endif %}
       </div>
-      <p>
-        {% if card_count %}<a href="{{ cards_url }}">{{ card_count }} card{{ card_count|pluralize }}</a> from this material.{% else %}No cards from this material yet.{% endif %}
-        {% if material.generation_note %}<span class="muted">{{ material.generation_note }}</span>{% endif %}
-      </p>
+      {% if preview_cards %}
+        <div class="list">
+          {% for card in preview_cards %}
+            <article class="flashcard">
+              {% if card.concept_label %}<div class="meta"><span class="badge badge-accent">Concept: {{ card.concept_label }}</span></div>{% endif %}
+              <p class="question">{{ card.question|linebreaksbr }}</p>
+              <div class="answer">{{ card.answer|linebreaksbr }}</div>
+            </article>
+          {% endfor %}
+        </div>
+        {% if card_count > preview_cards|length %}<p class="muted small"><a href="{{ cards_url }}">See the other {{ card_count|add:"-6" }}…</a></p>{% endif %}
+      {% endif %}
     </section>
   {% endif %}
 
   {% if material.raw_text %}
-    <section class="panel">
-      <h2 class="panel-title">Extracted text</h2>
+    <section class="section">
+      <div class="section-head"><h2>Extracted text</h2><span class="badge">Read only</span></div>
       <div class="text-preview" tabindex="0" aria-label="Extracted text">{{ material.raw_text|linebreaks }}</div>
     </section>
   {% endif %}

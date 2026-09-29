@@ -26,8 +26,9 @@ def test_signup_creates_user_and_logs_in(client):
         },
     )
 
+    # New accounts land on their profile (logging in goes to the course list).
     assert response.status_code == 302
-    assert response.url == reverse("courses:list")
+    assert response.url == reverse("profile")
     user = User.objects.get(username="carol")
     assert user.email == "carol@example.com"
     assert client.get(reverse("courses:list")).status_code == 200
@@ -93,11 +94,16 @@ def test_password_reset_flow(client, user):
     assert user.check_password(new_password)
 
 
-def test_password_change_requires_login(client):
-    response = client.get(reverse("password_change"))
+def test_settings_requires_login(client):
+    response = client.get(reverse("settings"))
 
     assert response.status_code == 302
     assert response.url.startswith(reverse("login"))
+
+
+def test_old_password_change_link_goes_to_settings(auth_client):
+    for name in ("password_change", "password_change_done"):
+        assert auth_client.get(reverse(name)).url == reverse("settings")
 
 
 def test_home_redirects_signed_in_user_to_courses(auth_client):

@@ -1,21 +1,26 @@
 {% extends "base.html" %}
 
 {% block title %}{% if course %}Edit {{ course.name }}{% else %}New course{% endif %} · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb">
-    {% if course %}
-      <a href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
-    {% else %}
-      <a href="{% url 'courses:list' %}">← All courses</a>
-    {% endif %}
-  </p>
-
-  <h1>{% if course %}Edit course{% else %}New course{% endif %}</h1>
-
-  <form method="post" class="form panel">
+  {% if course %}
+    <a class="back" href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
+  {% else %}
+    <a class="back" href="{% url 'courses:list' %}">← All courses</a>
+  {% endif %}
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">{% if course %}Course{% else %}New course{% endif %}</div>
+      <h1 class="title-long">{% if course %}Edit course{% else %}Create a course{% endif %}</h1>
+    </div>
+  </div>
+  <form method="post" class="form">
     {% csrf_token %}
     {{ form.as_div }}
-    <button type="submit" class="button">{% if course %}Save changes{% else %}Create course{% endif %}</button>
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">{% if course %}Save changes{% else %}Create course{% endif %}</button>
+      <a class="btn btn-ghost" href="{% if course %}{{ course.get_absolute_url }}{% else %}{% url 'courses:list' %}{% endif %}">Cancel</a>
+    </div>
   </form>
 {% endblock %}

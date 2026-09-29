@@ -1,0 +1,18 @@
+{# Shared confirmation, opened by static/js/parchment.js for anything with data-confirm. #}
+<div id="confirm-modal" class="modal-backdrop" role="alertdialog" aria-modal="true"
+     aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-message" aria-hidden="true">
+  <div class="modal small">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">Please confirm</div>
+        <h2 id="confirm-modal-title" data-confirm-title>Are you sure?</h2>
+      </div>
+      <button type="button" class="close" data-close-modal="confirm-modal" aria-label="Close">×</button>
+    </div>
+    <p id="confirm-modal-message" class="muted" data-confirm-message></p>
+    <div class="actions" style="margin-top: 22px">
+      <button type="button" class="btn btn-danger-solid" data-confirm-ok>Delete</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="confirm-modal">Cancel</button>
+    </div>
+  </div>
+</div>

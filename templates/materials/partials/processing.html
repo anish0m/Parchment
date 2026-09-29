@@ -1,0 +1,86 @@
+{% comment %}
+Live progress for one material, shown in the processing modal. While the material
+is being processed it asks the server for an update every 2 seconds.
+{% endcomment %}
+<div id="processing-{{ material.pk }}" role="status" aria-live="polite"
+     {% if reload_on_close or not material.in_progress %}data-reload-on-close{% endif %}
+     {% if material.in_progress and not stalled %}hx-get="{% url 'materials:status' material.pk %}?view=modal" hx-trigger="every 2s" hx-swap="outerHTML"{% if reload_on_close %} hx-vals='{"retried": "1"}'{% endif %}{% endif %}>
+  <div class="modal-head">
+    <div>
+      {% if material.status == "ready" %}
+        <div class="processing-icon done" aria-hidden="true">✓</div>
+        <div class="eyebrow">Material ready</div>
+        <h2>Your flashcards are ready.</h2>
+      {% elif material.status == "failed" %}
+        <div class="processing-icon failed" aria-hidden="true">!</div>
+        <div class="eyebrow">Material processing</div>
+        <h2>{% if material.raw_text %}We couldn't generate flashcards.{% else %}We couldn't read this material.{% endif %}</h2>
+      {% elif stalled %}
+        <div class="processing-icon failed" aria-hidden="true">!</div>
+        <div class="eyebrow">Material processing</div>
+        <h2>This is taking longer than expected.</h2>
+      {% else %}
+        <div class="processing-icon spinning" aria-hidden="true"><span>↻</span></div>
+        <div class="eyebrow">Material processing</div>
+        <h2>We're preparing your material.</h2>
+      {% endif %}
+    </div>
+    <button type="button" class="close" data-close-modal aria-label="Close">×</button>
+  </div>
+
+  <p class="item-title" style="margin: 0 0 6px">{{ material.title }}</p>
+  {% if error %}<div class="notice notice-danger" role="alert" style="margin-bottom: 14px">{{ error }}</div>{% endif %}
+
+  {% if material.status == "ready" %}
+    <p class="muted">{{ card_count }} flashcard{{ card_count|pluralize }} from this material, grouped by concept.{% if material.generation_note %} {{ material.generation_note }}{% endif %}</p>
+    <div class="actions" style="margin-top: 20px">
+      <a class="btn btn-primary" href="{{ cards_url }}">View flashcards</a>
+      <a class="btn btn-ghost" href="{{ material.get_absolute_url }}">Open material</a>
+    </div>
+  {% elif material.status == "failed" %}
+    <div class="notice notice-danger">{{ material.error_message }}</div>
+    <div class="actions" style="margin-top: 20px">
+      {% if material.raw_text %}
+        <form method="post" action="{% url 'materials:regenerate' material.pk %}"
+              hx-post="{% url 'materials:regenerate' material.pk %}" hx-target="#processing-{{ material.pk }}" hx-swap="outerHTML">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary"><span class="when-idle">Try again</span><span class="when-busy">Starting…</span></button>
+        </form>
+      {% endif %}
+      <a class="btn btn-ghost" href="{{ material.get_absolute_url }}">Open material</a>
+    </div>
+  {% elif stalled %}
+    <p class="muted">Processing may have stopped. You can start it again.</p>
+    <div class="actions" style="margin-top: 20px">
+      <form method="post" action="{% url 'materials:regenerate' material.pk %}"
+            hx-post="{% url 'materials:regenerate' material.pk %}" hx-target="#processing-{{ material.pk }}" hx-swap="outerHTML">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary"><span class="when-idle">Try again</span><span class="when-busy">Starting…</span></button>
+      </form>
+      <button type="button" class="btn btn-ghost" data-close-modal>Close</button>
+    </div>
+  {% else %}
+    <p class="muted">PDF extraction, concept clustering and card generation can take a while depending on the material.</p>
+    <div class="notice">You can close this window and come back later. Processing continues in the background.</div>
+    <div class="processing-track">
+      <div class="progress" role="progressbar" aria-label="Processing" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}">
+        <span style="width: {{ percent }}%"></span>
+      </div>
+      <div class="meta progress-label">
+        <span>{{ material.get_status_display }}…</span>
+        <strong>{{ percent }}%</strong>
+      </div>
+    </div>
+    <ol class="steps">
+      {% for step in steps %}
+        <li class="{{ step.state }}">{{ step.label }}</li>
+      {% endfor %}
+    </ol>
+    <div class="actions" style="margin-top: 20px">
+      <button type="button" class="btn btn-primary" data-close-modal>Continue in background</button>
+    </div>
+  {% endif %}
+</div>
+{% if refresh_list %}
+  {% include "materials/partials/material_list.html" with oob=True %}
+{% endif %}

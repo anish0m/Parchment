@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load course_tags %}
+
+{% block title %}Profile · Parchment{% endblock %}
+
+{% block content %}
+  <div class="profile-head">
+    <div class="avatar" aria-hidden="true">{{ user.get_full_name|default:user.get_username|initial }}</div>
+    <div class="profile-identity">
+      <div class="eyebrow">Profile</div>
+      <div class="profile-name">
+        <h1>{{ user.get_full_name|default:user.get_username }}</h1>
+        <a class="icon-btn" href="{% url 'settings' %}" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </a>
+      </div>
+      <div class="username-label">@{{ user.get_username }}</div>
+      <div class="email-label">{% if user.email %}{{ user.email }} · {% endif %}Member since {{ user.date_joined|date:"F Y" }}</div>
+    </div>
+  </div>
+
+  <dl class="stat-strip">
+    <div class="stat"><dt>Courses</dt><dd>{{ course_count }}</dd></div>
+    <div class="stat"><dt>Materials</dt><dd>{{ material_count }}</dd></div>
+    <div class="stat"><dt>Cards reviewed</dt><dd>{{ review_count }}</dd></div>
+  </dl>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Latest courses</h2>
+        <p class="muted small">Your two most recently active courses.</p>
+      </div>
+      <div class="actions">
+        {% if course_count %}<a class="btn btn-secondary btn-small" href="{% url 'courses:list' %}">Show all courses</a>{% endif %}
+        <button type="button" class="btn btn-primary btn-small" data-open-modal="course-modal">＋ New course</button>
+      </div>
+    </div>
+    {% if latest_courses %}
+      <ul class="course-grid">
+        {% for course in latest_courses %}
+          {% include "courses/partials/course_card.html" with show_activity=True %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">
+        <p><strong>No courses yet.</strong><br>Create a course for each subject, then add your notes to it.</p>
+        <div class="actions"><button type="button" class="btn btn-primary" data-open-modal="course-modal">Create your first course</button></div>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
+
+{% block modals %}
+  {% include "courses/partials/course_modal.html" with form=course_form %}
+{% endblock %}

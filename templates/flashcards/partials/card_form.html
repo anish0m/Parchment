@@ -1,7 +1,10 @@
-<form id="card-form" class="form form-wide" method="post" action="{% url 'flashcards:create' course.pk %}"
+<form id="card-form" class="form" method="post" action="{% url 'flashcards:create' course.pk %}"
       hx-post="{% url 'flashcards:create' course.pk %}" hx-target="this" hx-swap="outerHTML">
   {% csrf_token %}
-  {% if added %}<p class="success-text" role="status">Card added. Add another?</p>{% endif %}
+  {% if added %}<p class="notice" role="status">Card added. Add another, or close this window.</p>{% endif %}
   {{ form.as_div }}
-  <button type="submit" class="button">Add card</button>
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">Add flashcard</button>
+    <button type="button" class="btn btn-ghost" data-close-modal="flashcard-modal">{% if added %}Done{% else %}Cancel{% endif %}</button>
+  </div>
 </form>

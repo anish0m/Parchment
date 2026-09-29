@@ -23,6 +23,44 @@ def material_list_context(course, page_number):
     return {"course": course, "materials": page_obj.object_list, "page_obj": page_obj}
 
 
+PREVIEW_CARDS = 6
+
+# Where each processing stage sits on the progress bar.
+STAGES = [
+    (Material.Status.PENDING, "Queued", 10),
+    (Material.Status.PROCESSING, "Reading and cleaning the text", 35),
+    (Material.Status.GENERATING, "Finding concepts and writing flashcards", 70),
+]
+
+
+def material_cards_url(material):
+    return reverse("flashcards:list", args=[material.course_id]) + f"?material={material.pk}"
+
+
+def processing_context(material):
+    """Progress for the processing modal: percent done and the state of each step."""
+    current = next((i for i, (status, *_) in enumerate(STAGES) if status == material.status), None)
+    steps = [
+        {
+            "label": label,
+            "state": "done"
+            if current is None or i < current
+            else "current"
+            if i == current
+            else "todo",
+        }
+        for i, (_, label, _) in enumerate(STAGES)
+    ]
+    return {
+        "material": material,
+        "percent": STAGES[current][2] if current is not None else 100,
+        "steps": steps,
+        "stalled": is_stalled(material),
+        "card_count": material.flashcards.count(),
+        "cards_url": material_cards_url(material),
+    }
+
+
 class OwnedMaterialMixin(LoginRequiredMixin):
     """Limits every material query to the signed-in user's courses, so others' 404."""
 
@@ -47,7 +85,14 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
         context["course"] = self.course
         context["max_upload_mb"] = settings.MATERIAL_MAX_UPLOAD_MB
         context["max_pages"] = settings.MATERIAL_MAX_PDF_PAGES
+        context["in_modal"] = is_htmx(self.request)
         return context
+
+    def get_template_names(self):
+        # The course page's "Add material" modal loads and posts the form with HTMX.
+        if is_htmx(self.request):
+            return ["materials/partials/material_form.html"]
+        return [self.template_name]
 
     def form_valid(self, form):
         wait = wait_time(self.request, UploadThrottle)
@@ -67,44 +112,67 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
             upload=data["file"],
         )
         material.refresh_from_db()
+        if is_htmx(self.request):
+            # The modal switches to the processing view; the course's list updates too.
+            context = processing_context(material)
+            context.update(material_list_context(self.course, 1))
+            context["refresh_list"] = True
+            return render(self.request, "materials/partials/processing.html", context)
         if material.status == Material.Status.FAILED:
             messages.error(self.request, f"Couldn't process “{material.title}”.")
         elif material.in_progress:
             messages.success(
                 self.request,
-                f"Added “{material.title}”. Its flashcards are being generated; "
-                "this page updates when they're ready.",
+                f"Added “{material.title}”. Its flashcards are being generated.",
             )
         else:
             messages.success(self.request, f"Added “{material.title}”.")
         return redirect(material)
 
 
+def processing_url(material):
+    """The material's course page with its processing modal open."""
+    return reverse("courses:detail", args=[material.course_id]) + f"?processing={material.pk}"
+
+
 class MaterialDetailView(OwnedMaterialMixin, DetailView):
     template_name = "materials/material_detail.html"
+
+    def get(self, request, *args, **kwargs):
+        # A material still being processed has nothing to show yet: its progress
+        # lives in the processing modal on the course page.
+        self.object = self.get_object()
+        if self.object.in_progress:
+            return redirect(processing_url(self.object))
+        return self.render_to_response(self.get_context_data(object=self.object))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         material = self.object
         context["card_count"] = material.flashcards.count()
-        context["stalled"] = is_stalled(material)
-        context["cards_url"] = (
-            reverse("flashcards:list", args=[material.course_id]) + f"?material={material.pk}"
-        )
+        context["cards_url"] = material_cards_url(material)
+        context["preview_cards"] = material.flashcards.order_by("concept_label", "pk")[
+            :PREVIEW_CARDS
+        ]
         return context
 
 
 class MaterialStatusView(OwnedMaterialMixin, View):
     """Polled by HTMX while a material is processing.
 
-    ?view=row returns the material's row for the course page; otherwise the status
-    badge for its own page, which reloads once processing has finished.
+    ?view=row returns the material's row for the course page, ?view=modal the
+    processing modal's content; otherwise the status badge for its own page, which
+    reloads once processing has finished.
     """
 
     def get(self, request, pk):
         material = get_object_or_404(self.get_queryset(), pk=pk)
         if request.GET.get("view") == "row":
             return render(request, "materials/partials/material_row.html", {"material": material})
+        if request.GET.get("view") == "modal":
+            context = processing_context(material)
+            context["reload_on_close"] = request.GET.get("retried") == "1"
+            return render(request, "materials/partials/processing.html", context)
         response = render(request, "materials/partials/detail_status.html", {"material": material})
         if not material.in_progress:
             response["HX-Refresh"] = "true"  # show the results
@@ -112,28 +180,43 @@ class MaterialStatusView(OwnedMaterialMixin, View):
 
 
 class MaterialRegenerateView(OwnedMaterialMixin, View):
-    """Regenerates cards, or retries a material whose processing failed or stalled."""
+    """Regenerates cards, or retries a material whose processing failed or stalled.
+
+    The processing modal posts here with HTMX and gets its new content back.
+    """
 
     def post(self, request, pk):
         material = get_object_or_404(self.get_queryset(), pk=pk)
         wait = wait_time(request, GenerationThrottle)
         if wait:
-            messages.error(
-                request,
-                "You've regenerated cards a lot in a short time. "
+            return self.respond(
+                material,
+                error="You've regenerated cards a lot in a short time. "
                 f"Please try again in {describe_wait(wait)}.",
             )
-            return redirect(material)
         try:
             step = reprocess(material)
         except AlreadyProcessing:
-            messages.info(request, "This material is already being processed.")
-            return redirect(material)
+            return self.respond(material, info="This material is already being processed.")
+        material.refresh_from_db()
         if step == "regenerate":
-            messages.success(request, "Generating new flashcards…")
-        else:
-            messages.success(request, "Processing this material again…")
-        return redirect(material)
+            return self.respond(material, success="Generating new flashcards…")
+        return self.respond(material, success="Processing this material again…")
+
+    def respond(self, material, error=None, info=None, success=None):
+        if is_htmx(self.request):
+            context = processing_context(material)
+            context["error"] = error
+            # Closing the modal reloads the page so the material's row shows its new state.
+            context["reload_on_close"] = True
+            return render(self.request, "materials/partials/processing.html", context)
+        if error:
+            messages.error(self.request, error)
+        elif info:
+            messages.info(self.request, info)
+        elif not material.in_progress:  # finished straight away (or failed)
+            messages.success(self.request, success)
+        return redirect(material)  # still processing: the course page's modal
 
 
 class MaterialFileView(OwnedMaterialMixin, View):

@@ -1,8 +1,24 @@
-{% extends "base.html" %}
+{% extends "_skeleton.html" %}
+{% load static %}
 
-{% block content %}
-  <section class="auth-card">
-    <h1>{% block heading %}{% endblock %}</h1>
-    {% block body %}{% endblock %}
-  </section>
+{% block body %}
+  <main id="main" class="auth-page" tabindex="-1">
+    <button type="button" class="theme-toggle corner-theme" data-theme-toggle aria-label="Switch theme"><span data-theme-icon aria-hidden="true">☾</span></button>
+    <div class="auth-split">
+      <section class="auth-art" aria-hidden="true">
+        <div class="orbit"></div>
+        <img class="hero-art-image" src="{% static 'img/landing.webp' %}" alt="" width="300" height="230">
+        <div class="feather">✦</div>
+        <i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i>
+      </section>
+      <section class="auth-panel">
+        <a class="auth-logo" href="{% url 'home' %}"><img src="{% static 'img/logo.png' %}" alt="Parchment home" width="70" height="70"></a>
+        <div class="eyebrow">{% block eyebrow %}Parchment{% endblock %}</div>
+        <h1>{% block heading %}{% endblock %}</h1>
+        <p class="muted">{% block subtitle %}{% endblock %}</p>
+        {% include "partials/messages.html" %}
+        {% block body_content %}{% endblock %}
+      </section>
+    </div>
+  </main>
 {% endblock %}

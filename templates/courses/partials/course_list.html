@@ -1,10 +1,15 @@
 <div id="course-list" class="list-region"{% if oob %} hx-swap-oob="true"{% endif %}>
-  <ul class="course-grid">
-    {% for course in courses %}
-      {% include "courses/partials/course_card.html" %}
-    {% empty %}
-      <li class="empty-state">No courses yet. Create your first one above.</li>
-    {% endfor %}
-  </ul>
+  {% if courses %}
+    <ul class="course-grid">
+      {% for course in courses %}
+        {% include "courses/partials/course_card.html" %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty">
+      <p><strong>No courses yet.</strong><br>Create a course for each subject you're studying.</p>
+      <div class="actions"><button type="button" class="btn btn-primary" data-open-modal="course-modal">Create your first course</button></div>
+    </div>
+  {% endif %}
   {% include "partials/pagination.html" with target="course-list" %}
 </div>

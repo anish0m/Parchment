@@ -1,37 +1,91 @@
 {% extends "base.html" %}
 
 {% block title %}{{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-wide{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{% url 'courses:list' %}">← All courses</a></p>
-
-  <div class="page-header">
-    <h1>{{ course.name }}</h1>
-    <div class="actions">
-      <a class="button secondary" href="{% url 'courses:update' course.pk %}">Edit</a>
-      <a class="button danger" href="{% url 'courses:delete' course.pk %}">Delete</a>
+  <a class="back" href="{% url 'courses:list' %}">← All courses</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Course</div>
+      <div class="title-row">
+        <h1 class="course-title">{{ course.name }}</h1>
+        <div class="icon-actions">
+          <button type="button" class="icon-btn" data-open-modal="course-modal" title="Edit course" aria-label="Edit course">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <form method="post" action="{% url 'courses:delete' course.pk %}"
+                data-confirm="This permanently deletes “{{ course.name }}” with its materials, flashcards and study history."
+                data-confirm-title="Delete this course?" data-confirm-button="Delete course">
+            {% csrf_token %}
+            <button type="submit" class="icon-btn icon-btn-danger" title="Delete course" aria-label="Delete course">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+      {% if course.description %}<p class="lead">{{ course.description|linebreaksbr }}</p>{% endif %}
     </div>
+    {% include "study/partials/study_panel.html" %}
   </div>
 
-  {% if course.description %}
-    <p>{{ course.description|linebreaksbr }}</p>
-  {% endif %}
+  <dl class="stat-strip">
+    <div class="stat"><dt>Materials</dt><dd>{{ page_obj.paginator.count }}</dd></div>
+    <div class="stat"><dt>Flashcards</dt><dd>{{ card_count }}</dd></div>
+    <div class="stat"><dt>Due today</dt><dd>{{ due_count }}</dd></div>
+  </dl>
 
-  {% include "study/partials/study_panel.html" %}
-
-  <section class="panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Materials</h2>
-      <a class="button" href="{% url 'materials:create' course.pk %}">Add material</a>
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Materials</h2>
+        <p class="muted small">PDFs and notes belonging to this course.</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'materials:create' course.pk %}"
+         data-open-modal="material-modal" data-modal-url="{% url 'materials:create' course.pk %}">＋ Add material</a>
     </div>
     {% include "materials/partials/material_list.html" %}
   </section>
 
-  <section class="panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Flashcards</h2>
-      <a class="button" href="{% url 'flashcards:list' course.pk %}">{% if card_count %}View cards{% else %}Add cards{% endif %}</a>
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Flashcards</h2>
+        <p class="muted small">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}, grouped by concept. Here are the latest.{% else %}No flashcards yet. They're generated from your materials, or you can write your own.{% endif %}</p>
+      </div>
+      {% if card_count %}
+        <a class="text-link" href="{% url 'flashcards:list' course.pk %}">Show all flashcards</a>
+      {% else %}
+        <a class="btn btn-secondary" href="{% url 'flashcards:list' course.pk %}">Add flashcards</a>
+      {% endif %}
     </div>
-    <p class="muted">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}.{% else %}No flashcards yet.{% endif %}</p>
+    {% if latest_cards %}
+      <ul class="card-preview-grid" aria-label="Latest flashcards">
+        {% for card in latest_cards %}
+          <li class="card-preview">
+            {% if card.concept_label %}<span class="badge badge-accent">{{ card.concept_label }}</span>{% endif %}
+            <p class="question">{{ card.question }}</p>
+            <p class="answer">{{ card.answer }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </section>
+{% endblock %}
+
+{% block modals %}
+  {% include "courses/partials/course_modal.html" with form=course_form editing=course %}
+  {% include "partials/modal_shell.html" with id="material-modal" label="Add material" %}
+  {% if processing %}
+    {# Opened from ?processing=<pk>: a material that is still being processed. #}
+    <div id="processing-modal" class="modal-backdrop open" role="dialog" aria-modal="true" aria-label="Material processing" data-clear-on-close>
+      <div class="modal">
+        <div data-modal-body>
+          {% include "materials/partials/processing.html" with material=processing.material percent=processing.percent steps=processing.steps stalled=processing.stalled card_count=processing.card_count cards_url=processing.cards_url %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {% include "partials/modal_shell.html" with id="processing-modal" label="Material processing" %}
+  {% endif %}
 {% endblock %}

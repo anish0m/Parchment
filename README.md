@@ -111,8 +111,8 @@ CI (`.github/workflows/ci.yml`) runs lint and formatting, `manage.py check`, a c
 | `flashcards/` | `Flashcard` model, card pages, and the generation pipeline (`flashcards/generation/`) |
 | `study/` | Spaced repetition, review logs and study sessions |
 | `api/` | The REST API: serializers, viewsets and URLs under `/api/` |
-| `templates/` | Shared templates; `base.html` loads HTMX and Alpine.js |
-| `static/` | CSS and other static assets |
+| `templates/` | Shared templates: `_skeleton.html` (loads the theme, HTMX and Alpine.js), `base.html` (header and user menu), `registration/_auth_page.html` (sign-in pages) |
+| `static/` | `css/app.css` (the periwinkle theme, light and dark), `js/theme.js` and `js/parchment.js` (theme toggle, user menu, modals, confirmations), images |
 | `docker/entrypoint.sh` | Runs migrations and `createcachetable` (and `collectstatic` outside dev) before starting the server |
 | `docker/gunicorn.conf.py` | Gunicorn settings for production |
 | `docker/backup.sh` | Scheduled database and upload backups |

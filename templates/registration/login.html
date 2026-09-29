@@ -1,15 +1,19 @@
 {% extends "registration/_auth_page.html" %}
 
 {% block title %}Log in · Parchment{% endblock %}
-{% block heading %}Log in{% endblock %}
+{% block eyebrow %}Welcome back{% endblock %}
+{% block heading %}Welcome back{% endblock %}
+{% block subtitle %}Pick up where you left off.{% endblock %}
 
-{% block body %}
-  <form method="post" class="form">
+{% block body_content %}
+  <form method="post" class="form auth-form">
     {% csrf_token %}
     {{ form.as_div }}
     <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit" class="button">Log in</button>
+    <button type="submit" class="btn btn-primary btn-block">Log in</button>
   </form>
-  <p class="muted"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
-  <p class="muted">New here? <a href="{% url 'signup' %}">Create an account</a></p>
+  <p class="auth-foot small muted">
+    <a href="{% url 'password_reset' %}">Forgot your password?</a><br>
+    New to Parchment? <a href="{% url 'signup' %}">Create an account</a>
+  </p>
 {% endblock %}

@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}Delete {{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-  <h1>Delete “{{ course.name }}”?</h1>
-  <p>This permanently deletes the course and everything in it. It can't be undone.</p>
-  <form method="post" class="actions">
+  <a class="back" href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
+  <div class="eyebrow" style="margin-top: 16px">Delete course</div>
+  <h1 class="title-long">Delete “{{ course.name }}”?</h1>
+  <p class="lead">This permanently deletes the course with its materials, flashcards and study history. It can't be undone.</p>
+  <form method="post" class="actions" style="margin-top: 24px">
     {% csrf_token %}
-    <button type="submit" class="button danger">Delete course</button>
-    <a href="{{ course.get_absolute_url }}">Cancel</a>
+    <button type="submit" class="btn btn-danger-solid">Delete course</button>
+    <a class="btn btn-ghost" href="{{ course.get_absolute_url }}">Cancel</a>
   </form>
 {% endblock %}

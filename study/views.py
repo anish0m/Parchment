@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Avg
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -43,6 +44,7 @@ def study_panel_context(course, now=None):
     return {
         "course": course,
         "card_count": card_count,
+        "box_average": cards.aggregate(average=Avg("box"))["average"] if card_count else None,
         "due_count": due_cards(course, now=now).count() if card_count else 0,
         "next_due": upcoming.next_review_at if upcoming else None,
         "generating": course.materials.filter(status__in=Material.IN_PROGRESS).exists(),
