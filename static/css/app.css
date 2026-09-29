@@ -507,3 +507,15 @@ form.htmx-request .when-idle { display: none; }
   .study-top { display: grid; grid-template-columns: 1fr auto; row-gap: 4px; }
   .study-top > span { grid-column: 1 / -1; order: 3; }
 }
+
+/* Settings: one bordered row per setting, intro beside the form (stacked on phones). */
+.settings-section { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 16px 36px; padding: 30px 0; border-top: 1px solid var(--line); }
+.settings-intro h2 { font-size: 1.1rem; margin: 0 0 6px; }
+.settings-intro p { margin: 0; }
+.settings-section .actions { align-self: start; }
+.danger-zone h2 { color: var(--danger); }
+input[readonly] { background: var(--surface-soft); color: var(--muted); cursor: default; }
+.hero-copy .messages { width: 100%; margin: 0 0 22px; }
+@media (max-width: 700px) {
+  .settings-section { grid-template-columns: minmax(0, 1fr); }
+}

@@ -12,7 +12,7 @@
           <div class="user-menu" data-user-menu>
             <a href="{% url 'profile' %}">Profile</a>
             <a href="{% url 'courses:list' %}">All courses</a>
-            <a href="{% url 'password_change' %}">Change password</a>
+            <a href="{% url 'settings' %}">Settings</a>
             {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
             <hr>
             <form method="post" action="{% url 'logout' %}">

@@ -98,8 +98,9 @@ def test_profile_requires_login(client):
 
 def test_user_menu_links(auth_client):
     page = auth_client.get(reverse("courses:list")).content.decode()
-    for name in ("profile", "password_change", "logout"):
+    for name in ("profile", "settings", "logout"):
         assert reverse(name) in page
+    assert "Change password" not in page
     assert "data-theme-toggle" in page
 
 
@@ -219,3 +220,87 @@ def test_mastery(average, expected):
 @pytest.mark.parametrize(("name", "expected"), [("biology", "B"), ("  ∑ algebra", "A"), ("✦", "✦")])
 def test_initial(name, expected):
     assert initial(name) == expected
+
+
+# --- Settings -----------------------------------------------------------------------
+
+
+def test_settings_page_shows_the_sign_up_details(auth_client, user):
+    page = auth_client.get(reverse("settings")).content.decode()
+    assert f'value="{user.username}"' in page
+    assert f'value="{user.email}" readonly' in page
+    assert 'name="password-old_password"' in page
+    assert 'data-open-modal="delete-account-modal"' in page
+
+
+def test_settings_changes_the_username(auth_client, user):
+    response = auth_client.post(
+        reverse("settings"), {"action": "username", "account-username": "alice2"}
+    )
+    assert response.url == reverse("settings")
+    user.refresh_from_db()
+    assert user.username == "alice2"
+
+
+def test_settings_rejects_a_taken_username_in_any_case(auth_client, user, other_user):
+    response = auth_client.post(
+        reverse("settings"), {"action": "username", "account-username": "BOB"}
+    )
+    assert response.status_code == 400
+    assert "already exists" in response.content.decode()
+    user.refresh_from_db()
+    assert user.username == "alice"
+
+
+def test_settings_changes_the_password_and_keeps_you_signed_in(auth_client, user):
+    new = "a-brand-new-passphrase-42"
+    response = auth_client.post(
+        reverse("settings"),
+        {
+            "action": "password",
+            "password-old_password": PASSWORD,
+            "password-new_password1": new,
+            "password-new_password2": new,
+        },
+    )
+    assert response.url == reverse("settings")
+    user.refresh_from_db()
+    assert user.check_password(new)
+    assert auth_client.get(reverse("profile")).status_code == 200
+
+
+def test_settings_password_needs_the_old_password(auth_client, user):
+    response = auth_client.post(
+        reverse("settings"),
+        {
+            "action": "password",
+            "password-old_password": "wrong",
+            "password-new_password1": "a-brand-new-passphrase-42",
+            "password-new_password2": "a-brand-new-passphrase-42",
+        },
+    )
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.check_password(PASSWORD)
+
+
+def test_delete_account_with_wrong_password_reopens_the_modal(auth_client, user):
+    response = auth_client.post(reverse("delete_account"), {"password": "wrong"})
+    assert response.status_code == 400
+    page = response.content.decode()
+    assert 'id="delete-account-modal" class="modal-backdrop open"' in page
+    assert "That password is incorrect." in page
+    assert type(user).objects.filter(pk=user.pk).exists()
+
+
+def test_delete_account_removes_the_user_and_their_courses(auth_client, user, course):
+    response = auth_client.post(reverse("delete_account"), {"password": PASSWORD}, follow=True)
+    assert response.redirect_chain[-1][0] == reverse("home")
+    assert "has been deleted" in response.content.decode()
+    assert not type(user).objects.filter(pk=user.pk).exists()
+    assert not Course.objects.filter(pk=course.pk).exists()
+    assert auth_client.get(reverse("profile")).status_code == 302
+
+
+def test_delete_account_needs_post(auth_client):
+    assert auth_client.get(reverse("delete_account")).status_code == 405

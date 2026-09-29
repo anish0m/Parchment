@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Settings · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
+
+{% block content %}
+  <a class="back" href="{% url 'profile' %}">← Profile</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Account</div>
+      <h1 class="title-long">Settings</h1>
+      <p class="lead">Update the details you chose when you signed up.</p>
+    </div>
+  </div>
+
+  <section class="settings-section" aria-labelledby="settings-username">
+    <div class="settings-intro">
+      <h2 id="settings-username">Username</h2>
+      <p class="muted small">You sign in with it, and it's shown on your profile as @{{ user.get_username }}.</p>
+    </div>
+    <form method="post" class="form" action="{% url 'settings' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="username">
+      {{ username_form.as_div }}
+      <div class="actions"><button type="submit" class="btn btn-primary">Save username</button></div>
+    </form>
+  </section>
+
+  <section class="settings-section" aria-labelledby="settings-email">
+    <div class="settings-intro">
+      <h2 id="settings-email">Email</h2>
+      <p class="muted small">Password reset links go here. It can't be changed.</p>
+    </div>
+    <div class="form">
+      <div>
+        <label for="id_email_readonly">Email address</label>
+        <input type="email" id="id_email_readonly" value="{{ user.email }}" readonly aria-readonly="true">
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-section" id="password" aria-labelledby="settings-password">
+    <div class="settings-intro">
+      <h2 id="settings-password">Password</h2>
+      <p class="muted small">You'll stay signed in on this device after changing it.</p>
+    </div>
+    <form method="post" class="form" action="{% url 'settings' %}#password">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="password">
+      {{ password_form.as_div }}
+      <div class="actions"><button type="submit" class="btn btn-primary">Change password</button></div>
+    </form>
+  </section>
+
+  <section class="settings-section danger-zone" aria-labelledby="settings-delete">
+    <div class="settings-intro">
+      <h2 id="settings-delete">Delete account</h2>
+      <p class="muted small">Permanently removes your account with all your courses, materials, flashcards and study history. This can't be undone.</p>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-danger" data-open-modal="delete-account-modal">Delete my account</button>
+    </div>
+  </section>
+{% endblock %}
+
+{% block modals %}
+  <div id="delete-account-modal" class="modal-backdrop{% if open_delete %} open{% endif %}" role="alertdialog" aria-modal="true"
+       aria-labelledby="delete-account-title" aria-describedby="delete-account-text"{% if not open_delete %} aria-hidden="true"{% endif %}>
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">Delete account</div>
+          <h2 id="delete-account-title">Delete your account?</h2>
+        </div>
+        <button type="button" class="close" data-close-modal="delete-account-modal" aria-label="Close">×</button>
+      </div>
+      <div class="notice notice-danger" id="delete-account-text">
+        Everything in <strong>@{{ user.get_username }}</strong> will be deleted for good: courses, materials, flashcards and study history.
+      </div>
+      <form method="post" class="form" action="{% url 'delete_account' %}" style="margin-top: 20px">
+        {% csrf_token %}
+        {{ delete_form.as_div }}
+        <div class="actions">
+          <button type="submit" class="btn btn-danger-solid">Delete forever</button>
+          <button type="button" class="btn btn-ghost" data-close-modal="delete-account-modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

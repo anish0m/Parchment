@@ -94,11 +94,16 @@ def test_password_reset_flow(client, user):
     assert user.check_password(new_password)
 
 
-def test_password_change_requires_login(client):
-    response = client.get(reverse("password_change"))
+def test_settings_requires_login(client):
+    response = client.get(reverse("settings"))
 
     assert response.status_code == 302
     assert response.url.startswith(reverse("login"))
+
+
+def test_old_password_change_link_goes_to_settings(auth_client):
+    for name in ("password_change", "password_change_done"):
+        assert auth_client.get(reverse(name)).url == reverse("settings")
 
 
 def test_home_redirects_signed_in_user_to_courses(auth_client):
