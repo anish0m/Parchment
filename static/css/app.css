@@ -519,3 +519,7 @@ input[readonly] { background: var(--surface-soft); color: var(--muted); cursor: 
 @media (max-width: 700px) {
   .settings-section { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Buttons keep their label on one line; the title beside them wraps instead. */
+.btn { white-space: nowrap; }
+.page-head > .actions { flex-shrink: 0; }

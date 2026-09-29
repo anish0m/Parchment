@@ -34,13 +34,7 @@
     </div>
   </div>
 
-  {% if stalled %}
-    <div class="notice notice-danger" role="alert">
-      <strong>This is taking longer than expected.</strong>
-      <p>Processing may have stopped. You can start it again.</p>
-      <div class="actions" style="margin-top: 12px">{% include "materials/partials/regenerate_form.html" with label="Try again" style="btn-primary btn-small" %}</div>
-    </div>
-  {% elif material.status == "failed" %}
+  {% if material.status == "failed" %}
     <div class="notice notice-danger" role="alert">
       {% if material.raw_text %}
         <strong>We couldn't generate flashcards.</strong>
@@ -51,11 +45,6 @@
         <p>{{ material.error_message }}</p>
         <p>Add it again as pasted text or a different PDF from <a href="{{ material.course.get_absolute_url }}">the course page</a>.</p>
       {% endif %}
-    </div>
-  {% elif material.in_progress %}
-    <div class="notice">
-      <strong>{{ material.get_status_display }}…</strong>
-      <p>Your flashcards are being prepared. You can leave this page; processing continues in the background.</p>
     </div>
   {% endif %}
 

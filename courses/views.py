@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
-from materials.views import material_list_context
+from materials.views import material_list_context, processing_context
 from parchment.htmx import is_htmx, paginate, wants_fragment
 from study.views import study_panel_context
 
@@ -122,6 +122,12 @@ class CourseDetailView(OwnedCourseMixin, DetailView):
         context.update(material_list_context(self.object, self.request.GET.get("page")))
         context.update(study_panel_context(self.object))
         context["course_form"] = CourseForm(instance=self.object, owner=self.request.user)
+        # ?processing=<material pk> opens that material's processing modal.
+        processing = self.request.GET.get("processing", "")
+        if processing.isdigit():
+            material = self.object.materials.filter(pk=processing).first()
+            if material:
+                context["processing"] = processing_context(material)
         return context
 
 

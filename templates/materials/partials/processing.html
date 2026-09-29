@@ -3,8 +3,8 @@ Live progress for one material, shown in the processing modal. While the materia
 is being processed it asks the server for an update every 2 seconds.
 {% endcomment %}
 <div id="processing-{{ material.pk }}" role="status" aria-live="polite"
-     {% if not material.in_progress %}data-reload-on-close{% endif %}
-     {% if material.in_progress and not stalled %}hx-get="{% url 'materials:status' material.pk %}?view=modal" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+     {% if reload_on_close or not material.in_progress %}data-reload-on-close{% endif %}
+     {% if material.in_progress and not stalled %}hx-get="{% url 'materials:status' material.pk %}?view=modal" hx-trigger="every 2s" hx-swap="outerHTML"{% if reload_on_close %} hx-vals='{"retried": "1"}'{% endif %}{% endif %}>
   <div class="modal-head">
     <div>
       {% if material.status == "ready" %}
@@ -29,6 +29,7 @@ is being processed it asks the server for an update every 2 seconds.
   </div>
 
   <p class="item-title" style="margin: 0 0 6px">{{ material.title }}</p>
+  {% if error %}<div class="notice notice-danger" role="alert" style="margin-bottom: 14px">{{ error }}</div>{% endif %}
 
   {% if material.status == "ready" %}
     <p class="muted">{{ card_count }} flashcard{{ card_count|pluralize }} from this material, grouped by concept.{% if material.generation_note %} {{ material.generation_note }}{% endif %}</p>
@@ -40,9 +41,10 @@ is being processed it asks the server for an update every 2 seconds.
     <div class="notice notice-danger">{{ material.error_message }}</div>
     <div class="actions" style="margin-top: 20px">
       {% if material.raw_text %}
-        <form method="post" action="{% url 'materials:regenerate' material.pk %}">
+        <form method="post" action="{% url 'materials:regenerate' material.pk %}"
+              hx-post="{% url 'materials:regenerate' material.pk %}" hx-target="#processing-{{ material.pk }}" hx-swap="outerHTML">
           {% csrf_token %}
-          <button type="submit" class="btn btn-primary">Try again</button>
+          <button type="submit" class="btn btn-primary"><span class="when-idle">Try again</span><span class="when-busy">Starting…</span></button>
         </form>
       {% endif %}
       <a class="btn btn-ghost" href="{{ material.get_absolute_url }}">Open material</a>
@@ -50,9 +52,10 @@ is being processed it asks the server for an update every 2 seconds.
   {% elif stalled %}
     <p class="muted">Processing may have stopped. You can start it again.</p>
     <div class="actions" style="margin-top: 20px">
-      <form method="post" action="{% url 'materials:regenerate' material.pk %}">
+      <form method="post" action="{% url 'materials:regenerate' material.pk %}"
+            hx-post="{% url 'materials:regenerate' material.pk %}" hx-target="#processing-{{ material.pk }}" hx-swap="outerHTML">
         {% csrf_token %}
-        <button type="submit" class="btn btn-primary">Try again</button>
+        <button type="submit" class="btn btn-primary"><span class="when-idle">Try again</span><span class="when-busy">Starting…</span></button>
       </form>
       <button type="button" class="btn btn-ghost" data-close-modal>Close</button>
     </div>

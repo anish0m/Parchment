@@ -56,5 +56,16 @@
 {% block modals %}
   {% include "courses/partials/course_modal.html" with form=course_form editing=course %}
   {% include "partials/modal_shell.html" with id="material-modal" label="Add material" %}
-  {% include "partials/modal_shell.html" with id="processing-modal" label="Material processing" %}
+  {% if processing %}
+    {# Opened from ?processing=<pk>: a material that is still being processed. #}
+    <div id="processing-modal" class="modal-backdrop open" role="dialog" aria-modal="true" aria-label="Material processing" data-clear-on-close>
+      <div class="modal">
+        <div data-modal-body>
+          {% include "materials/partials/processing.html" with material=processing.material percent=processing.percent steps=processing.steps stalled=processing.stalled card_count=processing.card_count cards_url=processing.cards_url %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {% include "partials/modal_shell.html" with id="processing-modal" label="Material processing" %}
+  {% endif %}
 {% endblock %}

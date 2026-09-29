@@ -229,7 +229,7 @@ def test_stalled_material_can_be_retried(auth_client, material):
     long_ago = timezone.now() - timedelta(hours=2)
     Material.objects.filter(pk=material.pk).update(status="processing", updated_at=long_ago)
 
-    page = auth_client.get(material.get_absolute_url()).content.decode()
+    page = auth_client.get(material.get_absolute_url(), follow=True).content.decode()
     auth_client.post(reverse("materials:regenerate", args=[material.pk]))
 
     assert "taking longer than expected" in page

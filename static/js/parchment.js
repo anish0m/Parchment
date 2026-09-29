@@ -220,6 +220,13 @@
   // having opened it) get the same focus handling.
   const init = () => {
     syncThemeButtons();
+    // Links like ?processing=<pk> open a modal once; a reload shouldn't reopen it.
+    const url = new URL(window.location.href);
+    if (["processing", "new"].some((key) => url.searchParams.has(key))) {
+      url.searchParams.delete("processing");
+      url.searchParams.delete("new");
+      window.history.replaceState(window.history.state, "", url);
+    }
     document.querySelectorAll(".modal-backdrop.open").forEach((modal) => {
       modal.classList.remove("open");
       openModal(modal.id);

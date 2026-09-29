@@ -2,7 +2,12 @@
 <li class="list-row" id="material-{{ material.pk }}"{% if material.in_progress %}
     hx-get="{% url 'materials:status' material.pk %}?view=row" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
   <div class="list-main">
-    <a class="item-title" href="{{ material.get_absolute_url }}">{{ material.title }}</a>
+    {% if material.in_progress %}
+      <a class="item-title" href="{{ material.get_absolute_url }}" data-open-modal="processing-modal"
+         data-modal-url="{% url 'materials:status' material.pk %}?view=modal">{{ material.title }}</a>
+    {% else %}
+      <a class="item-title" href="{{ material.get_absolute_url }}">{{ material.title }}</a>
+    {% endif %}
     <div class="meta">
       <span>{% if material.is_pdf %}PDF{% else %}Text{% endif %}</span>
       {% if material.page_count %}<span>{{ material.page_count }} page{{ material.page_count|pluralize }}</span>{% endif %}

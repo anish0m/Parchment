@@ -304,3 +304,44 @@ def test_delete_account_removes_the_user_and_their_courses(auth_client, user, co
 
 def test_delete_account_needs_post(auth_client):
     assert auth_client.get(reverse("delete_account")).status_code == 405
+
+
+# --- Materials still processing live in the course page's modal ---------------------
+
+
+def test_processing_material_page_redirects_to_the_course_modal(auth_client, course):
+    material = Material.objects.create(
+        course=course, title="Notes", source_type="text", raw_text=NOTES, status="pending"
+    )
+    response = auth_client.get(material.get_absolute_url())
+    assert response.url == course.get_absolute_url() + f"?processing={material.pk}"
+
+    page = auth_client.get(response.url).content.decode()
+    assert 'id="processing-modal" class="modal-backdrop open"' in page
+    assert f'id="processing-{material.pk}"' in page
+
+
+def test_course_page_ignores_another_courses_material(auth_client, user, make_course, course):
+    other = make_course(user, "Other")
+    material = Material.objects.create(
+        course=other, title="Notes", source_type="text", raw_text=NOTES, status="pending"
+    )
+    page = auth_client.get(course.get_absolute_url() + f"?processing={material.pk}")
+    assert 'class="modal-backdrop open"' not in page.content.decode()
+
+
+def test_try_again_in_the_modal_returns_the_modal(auth_client, course):
+    material = Material.objects.create(
+        course=course, title="Notes", source_type="text", raw_text=NOTES, status="processing"
+    )
+    Material.objects.filter(pk=material.pk).update(updated_at=timezone.now() - timedelta(hours=2))
+    page = auth_client.get(course.get_absolute_url() + f"?processing={material.pk}")
+    assert f'hx-post="{reverse("materials:regenerate", args=[material.pk])}"' in (
+        page.content.decode()
+    )
+
+    response = auth_client.post(reverse("materials:regenerate", args=[material.pk]), **HTMX)
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert f'id="processing-{material.pk}"' in body
+    assert "data-reload-on-close" in body  # the course page refreshes when it closes
