@@ -221,25 +221,26 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps -v ./backups:/backu
   -xzf /backups/parchment-media-<time>.tar.gz -C /app/media
 ```
 
-### Free hosting (Hugging Face Spaces)
+### Free hosting (Render and Supabase)
 
-For a free demo with no payment method, the app runs on a [Hugging Face Space](https://huggingface.co/docs/hub/spaces-sdks-docker) (Docker, 16 GB of memory on the free CPU tier, so the embedding model fits) and the database on [Supabase](https://supabase.com)'s free PostgreSQL. The web server and the background worker share the Space's one container (`RUN_WORKER=1`). Every push to the `deployment` branch runs `.github/workflows/deploy.yml`, which uploads the code to the Space and copies the secrets over; the Space then rebuilds and restarts.
+For a free demo with no payment method, the app runs on [Render](https://render.com)'s free web service and the database on [Supabase](https://supabase.com)'s free PostgreSQL. `render.yaml` describes the service: it builds `Dockerfile.slim` from the `deployment` branch and redeploys on every push there.
 
-1. **Database.** Create a free Supabase project. Under **Connect**, copy the **Session pooler** connection string (the direct one needs IPv6, which Spaces lack) and fill in the database password.
-2. **Hugging Face.** Create a free account, then an access token with **Write** permission (Settings → Access Tokens).
-3. **GitHub secrets.** In this repository's Settings → Secrets and variables → Actions, add:
-   - `HF_TOKEN`: the Hugging Face token
+The free service has 512 MB of memory, so the slim image leaves out PyTorch and the embedding model (concepts are grouped with TF-IDF) and runs one web process with the background worker beside it (`RUN_WORKER=1`). Processing a 1 MB PDF peaks at about 330 MB.
+
+1. **Database.** Create a free Supabase project (turn off the Data API, which Parchment doesn't use). Under **Connect → Direct → Session pooler**, copy the URI and put the database password in it. The direct connection needs IPv6, which Render lacks.
+2. **Render.** Sign up at render.com with GitHub and allow access to this repository. Choose **New → Blueprint**, pick the repository and the `deployment` branch, and fill in:
    - `DATABASE_URL`: the Supabase connection string
-   - `DJANGO_SECRET_KEY`: a long random string (`python -c "import secrets; print(secrets.token_urlsafe(50))"`)
-   - optionally `GEMINI_API_KEY` (free at aistudio.google.com), `ANTHROPIC_API_KEY`, and `EMAIL_URL` for password reset emails, e.g. `smtp+tls://you@gmail.com:<app password>@smtp.gmail.com:587`
-   - optionally a *variable* `HF_SPACE` (e.g. `username/parchment`); by default the Space is `<your Hugging Face user>/parchment`
-4. **Deploy.** Push to `deployment`, or run the Deploy workflow from the Actions tab. The first build takes about 10 minutes. The app is at `https://<user>-parchment.hf.space` and is also shown on the Space's page.
+   - `GEMINI_API_KEY`: optional; a free key from aistudio.google.com writes much better cards
+   `DJANGO_SECRET_KEY` is generated for you. Click **Deploy Blueprint**; the first build takes about 5 minutes.
+3. Open the service's `https://<name>.onrender.com` address. Render sets `RENDER_EXTERNAL_HOSTNAME`, which the production settings trust, so `DJANGO_ALLOWED_HOSTS` isn't needed.
 
-The Space finds its own address (`SPACE_HOST`), so `DJANGO_ALLOWED_HOSTS` isn't needed, and it lets `huggingface.co` show the app in a frame. Limits of the free tier:
+Limits of the free tier:
 
-- The Space sleeps after 48 hours without visitors; the next visit wakes it in a minute or two. Supabase pauses a project after a week of inactivity (resume it from its dashboard).
-- The container's disk is wiped on every restart, so uploaded PDFs disappear. Courses, extracted text and flashcards are in the database and stay; only the link to the original PDF breaks.
-- The Space has no shell. To create an admin account, run `python manage.py createsuperuser` on your own machine with `DATABASE_URL` pointed at Supabase.
+- The service sleeps after 15 minutes without visitors; the next visit wakes it in about a minute. Supabase pauses a project after a week of inactivity (resume it from its dashboard).
+- The disk is wiped on every deploy and restart, so uploaded PDFs disappear. Courses, extracted text and flashcards are in the database and stay; only the link to the original PDF breaks.
+- PDFs are limited to 100 pages (`MATERIAL_MAX_PDF_PAGES`) to stay within memory.
+- Password reset emails need `EMAIL_URL` (see Configuration), e.g. `smtp+tls://you@gmail.com:<app password>@smtp.gmail.com:587`.
+- To create an admin account, run `python manage.py createsuperuser` on your own machine with `DATABASE_URL` pointed at Supabase.
 
 ## Security
 
@@ -248,7 +249,7 @@ The Space finds its own address (`SPACE_HOST`), so `DJANGO_ALLOWED_HOSTS` isn't 
 - Uploads are checked for type (`.pdf` and a `%PDF-` header), size and page count, and requests bigger than the upload limit are refused before they're read.
 - Uploads, card generation and failed sign-ins are rate limited.
 - A Content-Security-Policy header limits scripts to this site and jsDelivr, and the CDN scripts are pinned with subresource integrity hashes.
-- Production settings: `DEBUG` off, HTTPS redirect, secure and HttpOnly cookies, `nosniff`, `X-Frame-Options: DENY`, same-origin referrers (on a Hugging Face Space, only `huggingface.co` may frame the app). CI runs `manage.py check --deploy`.
+- Production settings: `DEBUG` off, HTTPS redirect, secure and HttpOnly cookies, `nosniff`, `X-Frame-Options: DENY`, same-origin referrers. CI runs `manage.py check --deploy`.
 
 ### Configuration
 

@@ -1,0 +1,29 @@
+# A smaller image for hosts with little memory, such as Render's free plan: no
+# PyTorch or embedding model, so flashcard concepts are grouped with TF-IDF.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DJANGO_SETTINGS_MODULE=parchment.settings.prod \
+    EMBEDDING_BACKEND=tfidf
+
+WORKDIR /app
+
+COPY requirements-slim.txt ./
+RUN pip install -r requirements-slim.txt
+
+RUN useradd --create-home --uid 1000 app \
+    && mkdir -p /app/media /app/staticfiles \
+    && chown -R app:app /app
+
+COPY --chown=app:app . .
+RUN chmod +x docker/entrypoint.sh
+
+USER app
+
+EXPOSE 8000
+
+ENTRYPOINT ["docker/entrypoint.sh"]
+CMD ["gunicorn", "--config", "docker/gunicorn.conf.py", "parchment.wsgi:application"]

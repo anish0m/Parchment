@@ -2,7 +2,8 @@
 
 import os
 
-bind = "0.0.0.0:8000"
+# Hosts like Render choose the port through PORT.
+bind = f"0.0.0.0:{os.environ.get('PORT', '8000')}"
 # WEB_CONCURRENCY is also read by gunicorn itself; 3 suits a small 2-CPU host.
 workers = int(os.environ.get("WEB_CONCURRENCY", "3"))
 # Uploads (up to MATERIAL_MAX_UPLOAD_MB) must finish within this; heavy work runs
