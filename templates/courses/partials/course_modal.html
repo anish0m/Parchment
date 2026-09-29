@@ -1,0 +1,14 @@
+{# The create (or, with `editing`, edit) course modal. `open` shows it on page load. #}
+<div id="course-modal" class="modal-backdrop{% if open %} open{% endif %}" role="dialog" aria-modal="true"
+     aria-labelledby="course-modal-title"{% if not open %} aria-hidden="true"{% endif %}>
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">{% if editing %}{{ editing.name }}{% else %}New course{% endif %}</div>
+        <h2 id="course-modal-title">{% if editing %}Edit course{% else %}Create a course{% endif %}</h2>
+      </div>
+      <button type="button" class="close" data-close-modal="course-modal" aria-label="Close">×</button>
+    </div>
+    {% include "courses/partials/course_form.html" %}
+  </div>
+</div>

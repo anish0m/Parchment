@@ -23,6 +23,44 @@ def material_list_context(course, page_number):
     return {"course": course, "materials": page_obj.object_list, "page_obj": page_obj}
 
 
+PREVIEW_CARDS = 6
+
+# Where each processing stage sits on the progress bar.
+STAGES = [
+    (Material.Status.PENDING, "Queued", 10),
+    (Material.Status.PROCESSING, "Reading and cleaning the text", 35),
+    (Material.Status.GENERATING, "Finding concepts and writing flashcards", 70),
+]
+
+
+def material_cards_url(material):
+    return reverse("flashcards:list", args=[material.course_id]) + f"?material={material.pk}"
+
+
+def processing_context(material):
+    """Progress for the processing modal: percent done and the state of each step."""
+    current = next((i for i, (status, *_) in enumerate(STAGES) if status == material.status), None)
+    steps = [
+        {
+            "label": label,
+            "state": "done"
+            if current is None or i < current
+            else "current"
+            if i == current
+            else "todo",
+        }
+        for i, (_, label, _) in enumerate(STAGES)
+    ]
+    return {
+        "material": material,
+        "percent": STAGES[current][2] if current is not None else 100,
+        "steps": steps,
+        "stalled": is_stalled(material),
+        "card_count": material.flashcards.count(),
+        "cards_url": material_cards_url(material),
+    }
+
+
 class OwnedMaterialMixin(LoginRequiredMixin):
     """Limits every material query to the signed-in user's courses, so others' 404."""
 
@@ -47,7 +85,14 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
         context["course"] = self.course
         context["max_upload_mb"] = settings.MATERIAL_MAX_UPLOAD_MB
         context["max_pages"] = settings.MATERIAL_MAX_PDF_PAGES
+        context["in_modal"] = is_htmx(self.request)
         return context
+
+    def get_template_names(self):
+        # The course page's "Add material" modal loads and posts the form with HTMX.
+        if is_htmx(self.request):
+            return ["materials/partials/material_form.html"]
+        return [self.template_name]
 
     def form_valid(self, form):
         wait = wait_time(self.request, UploadThrottle)
@@ -67,6 +112,12 @@ class MaterialCreateView(LoginRequiredMixin, FormView):
             upload=data["file"],
         )
         material.refresh_from_db()
+        if is_htmx(self.request):
+            # The modal switches to the processing view; the course's list updates too.
+            context = processing_context(material)
+            context.update(material_list_context(self.course, 1))
+            context["refresh_list"] = True
+            return render(self.request, "materials/partials/processing.html", context)
         if material.status == Material.Status.FAILED:
             messages.error(self.request, f"Couldn't process “{material.title}”.")
         elif material.in_progress:
@@ -88,23 +139,29 @@ class MaterialDetailView(OwnedMaterialMixin, DetailView):
         material = self.object
         context["card_count"] = material.flashcards.count()
         context["stalled"] = is_stalled(material)
-        context["cards_url"] = (
-            reverse("flashcards:list", args=[material.course_id]) + f"?material={material.pk}"
-        )
+        context["cards_url"] = material_cards_url(material)
+        context["preview_cards"] = material.flashcards.order_by("concept_label", "pk")[
+            :PREVIEW_CARDS
+        ]
         return context
 
 
 class MaterialStatusView(OwnedMaterialMixin, View):
     """Polled by HTMX while a material is processing.
 
-    ?view=row returns the material's row for the course page; otherwise the status
-    badge for its own page, which reloads once processing has finished.
+    ?view=row returns the material's row for the course page, ?view=modal the
+    processing modal's content; otherwise the status badge for its own page, which
+    reloads once processing has finished.
     """
 
     def get(self, request, pk):
         material = get_object_or_404(self.get_queryset(), pk=pk)
         if request.GET.get("view") == "row":
             return render(request, "materials/partials/material_row.html", {"material": material})
+        if request.GET.get("view") == "modal":
+            return render(
+                request, "materials/partials/processing.html", processing_context(material)
+            )
         response = render(request, "materials/partials/detail_status.html", {"material": material})
         if not material.in_progress:
             response["HX-Refresh"] = "true"  # show the results

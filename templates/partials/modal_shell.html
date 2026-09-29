@@ -1,0 +1,9 @@
+{% comment %}
+An empty modal whose content is loaded from the server when it opens
+(buttons with data-open-modal="<id>" data-modal-url="<url>").
+{% endcomment %}
+<div id="{{ id }}" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="{{ label }}" aria-hidden="true" data-clear-on-close>
+  <div class="modal{% if size %} {{ size }}{% endif %}">
+    <div data-modal-body><p class="modal-loading">Loading…</p></div>
+  </div>
+</div>

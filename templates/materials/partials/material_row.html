@@ -1,29 +1,33 @@
 {% load humanize %}
-<li class="material-row" id="material-{{ material.pk }}"{% if material.in_progress %}
+<li class="list-row" id="material-{{ material.pk }}"{% if material.in_progress %}
     hx-get="{% url 'materials:status' material.pk %}?view=row" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
-  <div class="material-main">
-    <a class="material-title" href="{{ material.get_absolute_url }}">{{ material.title }}</a>
-    <div class="badges">
-      <span class="badge">{% if material.is_pdf %}PDF{% else %}Text{% endif %}</span>
+  <div class="list-main">
+    <a class="item-title" href="{{ material.get_absolute_url }}">{{ material.title }}</a>
+    <div class="meta">
+      <span>{% if material.is_pdf %}PDF{% else %}Text{% endif %}</span>
+      {% if material.page_count %}<span>{{ material.page_count }} page{{ material.page_count|pluralize }}</span>{% endif %}
+      {% if material.word_count and not material.in_progress %}<span>{{ material.word_count|intcomma }} word{{ material.word_count|pluralize }}</span>{% endif %}
+      <span>Added {{ material.created_at|date:"M j, Y" }}</span>
       {% include "materials/partials/status_badge.html" %}
     </div>
-  </div>
-  <p class="muted small material-meta">
     {% if material.status == "failed" %}
-      <span class="error-text">{{ material.error_message|truncatewords:14 }}</span>
-    {% elif material.in_progress %}
-      {{ material.get_status_display }}…
-    {% else %}
-      {% if material.page_count %}{{ material.page_count }} page{{ material.page_count|pluralize }} · {% endif %}{{ material.word_count|intcomma }} word{{ material.word_count|pluralize }} ·
+      <p class="small" style="margin: 0; color: var(--danger)">{{ material.error_message|truncatewords:18 }}</p>
     {% endif %}
-    Added {{ material.created_at|date:"M j, Y" }}
-  </p>
-  <form method="post" action="{% url 'materials:delete' material.pk %}"
-        hx-post="{% url 'materials:delete' material.pk %}"
-        hx-target="#material-list" hx-swap="outerHTML"
-        hx-confirm="Delete “{{ material.title }}”?">
-    {% csrf_token %}
-    <input type="hidden" name="page" value="{{ page_obj.number|default:1 }}">
-    <button type="submit" class="link danger small">Delete</button>
-  </form>
+  </div>
+  <div class="actions">
+    {% if material.in_progress %}
+      <button type="button" class="btn btn-soft btn-small" data-open-modal="processing-modal"
+              data-modal-url="{% url 'materials:status' material.pk %}?view=modal">View progress</button>
+    {% else %}
+      <a class="btn btn-soft btn-small" href="{{ material.get_absolute_url }}">View</a>
+    {% endif %}
+    <form method="post" action="{% url 'materials:delete' material.pk %}"
+          hx-post="{% url 'materials:delete' material.pk %}" hx-target="#material-list" hx-swap="outerHTML"
+          data-confirm="“{{ material.title }}” and its file will be deleted. Flashcards made from it stay in the course."
+          data-confirm-title="Delete this material?">
+      {% csrf_token %}
+      <input type="hidden" name="page" value="{{ page_obj.number|default:1 }}">
+      <button type="submit" class="btn btn-danger btn-small">Delete</button>
+    </form>
+  </div>
 </li>

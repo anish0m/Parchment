@@ -3,14 +3,42 @@
 {% block title %}Your courses · Parchment{% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>Your courses</h1>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Your library</div>
+      <h1>Your courses</h1>
+      <p class="lead">Keep every subject, material and review queue together.</p>
+    </div>
+    <button type="button" class="btn btn-primary" data-open-modal="course-modal">＋ New course</button>
   </div>
 
-  <section class="panel">
-    <h2 class="panel-title">New course</h2>
-    {% include "courses/partials/course_form.html" %}
-  </section>
-
   {% include "courses/partials/course_list.html" %}
+
+  {% if page_obj.paginator.count %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Review across courses</h2>
+          <p class="muted small">
+            {% if total_due %}
+              {{ total_due }} card{{ total_due|pluralize }} {{ total_due|pluralize:"is,are" }} due in {{ due_course_count }} course{{ due_course_count|pluralize }}.
+              {% if busiest %}“{{ busiest.name }}” has the most waiting.{% endif %}
+            {% else %}
+              Nothing is due today. Cards you answer come back when they're due.
+            {% endif %}
+          </p>
+        </div>
+        {% if busiest %}
+          <form method="post" action="{% url 'study:start' busiest.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-soft">Start with {{ busiest.name|truncatechars:30 }}</button>
+          </form>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block modals %}
+  {% include "courses/partials/course_modal.html" with open=open_modal %}
 {% endblock %}

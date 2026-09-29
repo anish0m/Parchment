@@ -1,37 +1,60 @@
 {% extends "base.html" %}
 
 {% block title %}{{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-wide{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{% url 'courses:list' %}">← All courses</a></p>
-
-  <div class="page-header">
-    <h1>{{ course.name }}</h1>
+  <a class="back" href="{% url 'courses:list' %}">← All courses</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Course</div>
+      <h1 class="title-long">{{ course.name }}</h1>
+      {% if course.description %}<p class="lead">{{ course.description|linebreaksbr }}</p>{% endif %}
+    </div>
     <div class="actions">
-      <a class="button secondary" href="{% url 'courses:update' course.pk %}">Edit</a>
-      <a class="button danger" href="{% url 'courses:delete' course.pk %}">Delete</a>
+      <button type="button" class="btn btn-soft" data-open-modal="course-modal">Edit</button>
+      <form method="post" action="{% url 'courses:delete' course.pk %}"
+            data-confirm="This permanently deletes “{{ course.name }}” with its materials, flashcards and study history."
+            data-confirm-title="Delete this course?" data-confirm-button="Delete course">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
     </div>
   </div>
 
-  {% if course.description %}
-    <p>{{ course.description|linebreaksbr }}</p>
-  {% endif %}
+  <dl class="stat-strip">
+    <div class="stat"><dt>Materials</dt><dd>{{ page_obj.paginator.count }}</dd></div>
+    <div class="stat"><dt>Flashcards</dt><dd>{{ card_count }}</dd></div>
+    <div class="stat"><dt>Due today</dt><dd>{{ due_count }}</dd></div>
+  </dl>
 
   {% include "study/partials/study_panel.html" %}
 
-  <section class="panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Materials</h2>
-      <a class="button" href="{% url 'materials:create' course.pk %}">Add material</a>
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Materials</h2>
+        <p class="muted small">PDFs and notes belonging to this course.</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'materials:create' course.pk %}"
+         data-open-modal="material-modal" data-modal-url="{% url 'materials:create' course.pk %}">＋ Add material</a>
     </div>
     {% include "materials/partials/material_list.html" %}
   </section>
 
-  <section class="panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Flashcards</h2>
-      <a class="button" href="{% url 'flashcards:list' course.pk %}">{% if card_count %}View cards{% else %}Add cards{% endif %}</a>
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Flashcards</h2>
+        <p class="muted small">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}, grouped by concept. Edit any card or add your own.{% else %}No flashcards yet. They're generated from your materials, or you can write your own.{% endif %}</p>
+      </div>
+      <a class="btn btn-secondary" href="{% url 'flashcards:list' course.pk %}">{% if card_count %}View flashcards{% else %}Add flashcards{% endif %}</a>
     </div>
-    <p class="muted">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}.{% else %}No flashcards yet.{% endif %}</p>
   </section>
+{% endblock %}
+
+{% block modals %}
+  {% include "courses/partials/course_modal.html" with form=course_form editing=course %}
+  {% include "partials/modal_shell.html" with id="material-modal" label="Add material" %}
+  {% include "partials/modal_shell.html" with id="processing-modal" label="Material processing" %}
 {% endblock %}

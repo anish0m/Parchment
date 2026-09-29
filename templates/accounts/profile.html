@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load course_tags %}
+
+{% block title %}Profile · Parchment{% endblock %}
+
+{% block content %}
+  <div class="profile-head">
+    <div class="avatar" aria-hidden="true">{{ user.get_full_name|default:user.get_username|initial }}</div>
+    <div class="profile-identity">
+      <div class="eyebrow">Profile</div>
+      <h1>{{ user.get_full_name|default:user.get_username }}</h1>
+      <div class="username-label">@{{ user.get_username }}</div>
+      <div class="email-label">{% if user.email %}{{ user.email }} · {% endif %}Member since {{ user.date_joined|date:"F Y" }}</div>
+    </div>
+  </div>
+
+  <dl class="stat-strip">
+    <div class="stat"><dt>Courses</dt><dd>{{ course_count }}</dd></div>
+    <div class="stat"><dt>Materials</dt><dd>{{ material_count }}</dd></div>
+    <div class="stat"><dt>Cards reviewed</dt><dd>{{ review_count }}</dd></div>
+  </dl>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Latest courses</h2>
+        <p class="muted small">Your two most recently active courses.</p>
+      </div>
+      <div class="actions">
+        {% if course_count %}<a class="btn btn-secondary btn-small" href="{% url 'courses:list' %}">Show all courses</a>{% endif %}
+        <button type="button" class="btn btn-primary btn-small" data-open-modal="course-modal">＋ New course</button>
+      </div>
+    </div>
+    {% if latest_courses %}
+      <ul class="course-grid">
+        {% for course in latest_courses %}
+          {% include "courses/partials/course_card.html" with show_activity=True %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">
+        <p><strong>No courses yet.</strong><br>Create a course for each subject, then add your notes to it.</p>
+        <div class="actions"><button type="button" class="btn btn-primary" data-open-modal="course-modal">Create your first course</button></div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <h2>Account</h2>
+        <p class="muted small">Signed in as {{ user.get_username }}.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost btn-small" href="{% url 'password_change' %}">Change password</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block modals %}
+  {% include "courses/partials/course_modal.html" with form=course_form %}
+{% endblock %}

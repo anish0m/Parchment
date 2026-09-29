@@ -9,7 +9,9 @@ class CourseForm(forms.ModelForm):
         fields = ("name", "description")
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Organic Chemistry"}),
-            "description": forms.Textarea(attrs={"rows": 3}),
+            "description": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "What are you learning? (optional)"}
+            ),
         }
 
     def __init__(self, *args, owner, **kwargs):

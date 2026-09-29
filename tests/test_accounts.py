@@ -26,8 +26,9 @@ def test_signup_creates_user_and_logs_in(client):
         },
     )
 
+    # New accounts land on their profile (logging in goes to the course list).
     assert response.status_code == 302
-    assert response.url == reverse("courses:list")
+    assert response.url == reverse("profile")
     user = User.objects.get(username="carol")
     assert user.email == "carol@example.com"
     assert client.get(reverse("courses:list")).status_code == 200

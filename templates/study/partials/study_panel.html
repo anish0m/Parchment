@@ -1,32 +1,40 @@
-{% load humanize %}
-<section id="study-panel" class="panel study-panel"
+{% load humanize course_tags %}
+<section id="study-panel" class="section"
   {% if generating and not card_count %}hx-get="{% url 'study:panel' course.pk %}" hx-trigger="every 5s" hx-swap="outerHTML"{% endif %}>
-  <div class="panel-header">
-    <h2 class="panel-title">Study</h2>
-    {% if card_count %}<a href="{% url 'study:progress' course.pk %}">Progress</a>{% endif %}
-  </div>
-  {% if not card_count %}
-    {% if generating %}
-      <p class="muted status-line"><span class="badge status-generating">Generating cards</span> Your flashcards will appear here when they're ready.</p>
-    {% else %}
-      <p class="muted">No flashcards yet. Add a material to generate some, or <a href="{% url 'flashcards:list' course.pk %}">write your own</a>.</p>
+  <div class="section-head">
+    <div>
+      <h2>Study</h2>
+      {% if not card_count %}
+        {% if generating %}
+          <p class="muted small" role="status"><span class="badge status-generating">Generating cards</span> Your flashcards will appear here when they're ready.</p>
+        {% else %}
+          <p class="muted small">No flashcards yet. Add a material to generate some, or <a href="{% url 'flashcards:list' course.pk %}">write your own</a>.</p>
+        {% endif %}
+      {% elif due_count %}
+        <p class="muted small">Your Leitner queue is ready: <strong>{{ due_count }}</strong> card{{ due_count|pluralize }} due.</p>
+      {% else %}
+        <p class="muted small">Nothing due today.{% if next_due %} Next card due {{ next_due|naturalday:"M j" }}.{% endif %}</p>
+      {% endif %}
+    </div>
+    {% if card_count %}
+      <div class="actions">
+        <a class="btn btn-ghost" href="{% url 'study:progress' course.pk %}">Progress</a>
+        <form method="post" action="{% url 'study:start' course.pk %}">
+          {% csrf_token %}
+          {% if due_count %}
+            <button type="submit" class="btn btn-primary">Study now</button>
+          {% else %}
+            <input type="hidden" name="mode" value="practice">
+            <button type="submit" class="btn btn-secondary">Study anyway</button>
+          {% endif %}
+        </form>
+      </div>
     {% endif %}
-  {% elif due_count %}
-    <div class="study-cta">
-      <p class="study-due"><strong>{{ due_count }}</strong> card{{ due_count|pluralize }} due</p>
-      <form method="post" action="{% url 'study:start' course.pk %}">
-        {% csrf_token %}
-        <button type="submit" class="button">Study now</button>
-      </form>
-    </div>
-  {% else %}
-    <div class="study-cta">
-      <p class="study-due">Nothing due today.{% if next_due %} <span class="muted">Next card due {{ next_due|naturalday:"M j" }}.</span>{% endif %}</p>
-      <form method="post" action="{% url 'study:start' course.pk %}">
-        {% csrf_token %}
-        <input type="hidden" name="mode" value="practice">
-        <button type="submit" class="button secondary">Study anyway</button>
-      </form>
-    </div>
+  </div>
+  {% if card_count %}
+    {% with percent=box_average|mastery %}
+      <div class="progress" role="img" aria-label="{{ percent }}% mastered"><span style="width: {{ percent }}%"></span></div>
+      <p class="muted small progress-label"><span>{{ percent }}% mastered</span><span>Box 5 means mastered</span></p>
+    {% endwith %}
   {% endif %}
 </section>

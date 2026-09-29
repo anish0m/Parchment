@@ -2,89 +2,89 @@
 {% load humanize %}
 
 {% block title %}Progress · {{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-wide{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{{ course.get_absolute_url }}">← {{ course.name }}</a></p>
-  <div class="page-header">
-    <h1>Progress</h1>
+  <a class="back" href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Course analytics</div>
+      <h1>Progress</h1>
+      <p class="lead">How your cards are moving through the Leitner boxes.</p>
+    </div>
     {% if card_count %}
-      <form method="post" action="{% url 'study:start' course.pk %}" class="actions">
+      <form method="post" action="{% url 'study:start' course.pk %}">
         {% csrf_token %}
         {% if due_now %}
-          <button type="submit" class="button">Study {{ due_now }} due card{{ due_now|pluralize }}</button>
+          <button type="submit" class="btn btn-primary">Study {{ due_now }} due card{{ due_now|pluralize }}</button>
         {% else %}
           <input type="hidden" name="mode" value="practice">
-          <button type="submit" class="button secondary">Study anyway</button>
+          <button type="submit" class="btn btn-secondary">Study anyway</button>
         {% endif %}
       </form>
     {% endif %}
   </div>
 
   {% if not card_count %}
-    <p class="empty-state">No flashcards yet, so there's no progress to show. <a href="{{ course.get_absolute_url }}">Add a material</a> to get started.</p>
+    <div class="empty">
+      <p><strong>No flashcards yet, so there's no progress to show.</strong><br><a href="{{ course.get_absolute_url }}">Add a material</a> to get started.</p>
+    </div>
   {% else %}
-    <dl class="stat-grid">
+    <dl class="stat-strip">
       <div class="stat"><dt>Cards</dt><dd>{{ card_count }}</dd></div>
       <div class="stat"><dt>Due now</dt><dd>{{ due_now }}</dd></div>
       <div class="stat"><dt title="Cards in the top box">Mastered</dt><dd>{{ mastered }}</dd></div>
       <div class="stat"><dt>Accuracy</dt><dd>{% if accuracy is not None %}{{ accuracy }}%{% else %}—{% endif %}</dd></div>
-      <div class="stat"><dt>Streak</dt><dd>{{ streak }} day{{ streak|pluralize }}</dd></div>
+      <div class="stat"><dt>Review streak</dt><dd>{{ streak }} day{{ streak|pluralize }}</dd></div>
       <div class="stat"><dt>Last studied</dt><dd>{% if last_studied %}{{ last_studied|naturalday:"M j" }}{% else %}Never{% endif %}</dd></div>
     </dl>
     {% if not due_now and next_due %}
-      <p class="muted">Nothing is due. The next card is due {{ next_due|naturalday:"l, M j" }}.</p>
+      <p class="muted small" style="margin-top: 14px">Nothing is due. The next card is due {{ next_due|naturalday:"l, M j" }}.</p>
     {% endif %}
 
-    <section class="panel">
-      <h2 class="panel-title">Cards per box</h2>
-      <table class="bar-table">
-        <caption class="sr-only">Number of cards in each Leitner box</caption>
-        <thead class="sr-only"><tr><th scope="col">Box</th><th scope="col">Cards</th></tr></thead>
-        <tbody>
-          {% for row in boxes %}
-            <tr>
-              <th scope="row">
-                Box {{ row.box }}
-                <span class="muted small">every {% if row.interval_days == 1 %}day{% else %}{{ row.interval_days }} days{% endif %}</span>
-              </th>
-              <td><div class="bar-cell">
-                <span class="bar" title="Box {{ row.box }}: {{ row.count }} card{{ row.count|pluralize }} ({{ row.share }}%)">
-                  <span class="bar-fill" style="width: {{ row.width }}%"></span>
-                </span>
-                <span class="bar-value">{{ row.count }}</span>
-              </div></td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <p class="muted small">Correct answers move a card up a box, so it comes back less often. A miss sends it back to box 1.</p>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Leitner boxes</h2>
+          <p class="muted small">Missed cards return sooner; mastered cards move farther out.</p>
+        </div>
+      </div>
+      <ul class="bar-rows">
+        {% for row in boxes %}
+          <li>
+            <div class="meta">
+              <span>Box {{ row.box }} · every {% if row.interval_days == 1 %}day{% else %}{{ row.interval_days }} days{% endif %}{% if forloop.first %} · frequent review{% elif forloop.last %} · mastered{% endif %}</span>
+              <strong>{{ row.count }} <span class="muted small">({{ row.share }}%)</span></strong>
+            </div>
+            <div class="progress" role="img" aria-label="Box {{ row.box }}: {{ row.count }} card{{ row.count|pluralize }}" title="Box {{ row.box }}: {{ row.count }} card{{ row.count|pluralize }} ({{ row.share }}%)">
+              <span style="width: {{ row.width }}%"></span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
     </section>
 
-    <section class="panel">
-      <h2 class="panel-title">Recent sessions</h2>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Recent sessions</h2>
+          <p class="muted small">Share of cards answered correctly in your last {{ sessions|length|default:"" }} session{{ sessions|length|pluralize }}.</p>
+        </div>
+      </div>
       {% if sessions %}
-        <table class="bar-table">
-          <caption class="sr-only">Accuracy in your {{ sessions|length }} most recent sessions</caption>
-          <thead>
-            <tr><th scope="col">Date</th><th scope="col">Correct <span class="muted small">(of cards reviewed)</span></th></tr>
-          </thead>
-          <tbody>
-            {% for row in sessions %}
-              <tr>
-                <th scope="row">
-                  {{ row.session.started_at|naturalday:"M j" }}
-                  <span class="muted small">{{ row.session.started_at|time:"H:i" }}{% if row.session.mode == "practice" %} · practice{% endif %}</span>
-                </th>
-                <td><div class="bar-cell">
-                  <span class="bar" title="{{ row.session.cards_correct }} of {{ row.session.cards_reviewed }} correct">
-                    <span class="bar-fill" style="width: {{ row.accuracy }}%"></span>
-                  </span>
-                  <span class="bar-value">{{ row.accuracy }}% <span class="muted small">of {{ row.session.cards_reviewed }}</span></span>
-                </div></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <ul class="bar-rows">
+          {% for row in sessions %}
+            <li>
+              <div class="meta">
+                <span>{{ row.session.started_at|naturalday:"M j" }} · {{ row.session.started_at|time:"H:i" }}{% if row.session.mode == "practice" %} · practice{% endif %}</span>
+                <strong>{{ row.accuracy }}% <span class="muted small">of {{ row.session.cards_reviewed }}</span></strong>
+              </div>
+              <div class="progress" role="img" aria-label="{{ row.session.cards_correct }} of {{ row.session.cards_reviewed }} correct" title="{{ row.session.cards_correct }} of {{ row.session.cards_reviewed }} correct">
+                <span style="width: {{ row.accuracy }}%"></span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
       {% else %}
         <p class="muted">No study sessions yet. Your accuracy will show up here after your first one.</p>
       {% endif %}

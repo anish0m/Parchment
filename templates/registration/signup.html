@@ -1,13 +1,16 @@
 {% extends "registration/_auth_page.html" %}
 
 {% block title %}Sign up · Parchment{% endblock %}
+{% block eyebrow %}Start studying{% endblock %}
 {% block heading %}Create your account{% endblock %}
+{% block subtitle %}Keep your courses, materials and review history together.{% endblock %}
 
-{% block body %}
-  <form method="post" class="form">
+{% block body_content %}
+  <form method="post" class="form auth-form" x-data="{ password1: '', password2: '' }">
     {% csrf_token %}
     {{ form.as_div }}
-    <button type="submit" class="button">Sign up</button>
+    <p class="errorlist small" role="status" x-show="password2 && password1 !== password2" x-cloak>Passwords don't match yet.</p>
+    <button type="submit" class="btn btn-primary btn-block">Create account</button>
   </form>
-  <p class="muted">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+  <p class="auth-foot small muted">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
 {% endblock %}

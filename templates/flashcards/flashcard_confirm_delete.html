@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}Delete card · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-  <h1>Delete this card?</h1>
-  <p class="panel">{{ card.question|linebreaksbr }}</p>
-  <form method="post" class="actions">
+  <a class="back" href="{% url 'flashcards:list' card.course.pk %}">← {{ card.course.name }} flashcards</a>
+  <div class="eyebrow" style="margin-top: 16px">Delete flashcard</div>
+  <h1 class="title-long">Delete this card?</h1>
+  <p class="lead">“{{ card.question|truncatechars:120 }}” and its review history will be deleted.</p>
+  <form method="post" class="actions" style="margin-top: 24px">
     {% csrf_token %}
-    <button type="submit" class="button danger">Delete card</button>
-    <a href="{% url 'flashcards:list' card.course.pk %}">Cancel</a>
+    <button type="submit" class="btn btn-danger-solid">Delete card</button>
+    <a class="btn btn-ghost" href="{% url 'flashcards:list' card.course.pk %}">Cancel</a>
   </form>
 {% endblock %}

@@ -1,5 +1,5 @@
 <form method="post" action="{% url 'materials:regenerate' material.pk %}"
-      {% if confirm %}onsubmit="return confirm('Replace the cards from this material that you haven\'t edited or studied yet?')"{% endif %}>
+      {% if confirm %}data-confirm="Cards from this material that you haven't edited or studied will be replaced with new ones." data-confirm-title="Regenerate the cards?" data-confirm-button="Regenerate" data-confirm-style="primary"{% endif %}>
   {% csrf_token %}
-  <button type="submit" class="button secondary">{{ label }}</button>
+  <button type="submit" class="btn {{ style|default:'btn-secondary' }}">{{ label }}</button>
 </form>

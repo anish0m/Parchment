@@ -1,43 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}Add material · {{ course.name }} · Parchment{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-  <p class="breadcrumb"><a href="{{ course.get_absolute_url }}">← {{ course.name }}</a></p>
-  <h1>Add material</h1>
-
-  {% with mode=form.source_type.value|default:"text" %}
-  <form method="post" enctype="multipart/form-data" class="form panel form-wide"
-        x-data="{ mode: '{{ mode }}', submitting: false }" @submit="submitting = true">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-
-    <fieldset class="choice-group">
-      <legend>{{ form.source_type.label }}</legend>
-      {{ form.source_type.errors }}
-      {% for radio in form.source_type %}
-        <label class="choice">{{ radio.tag }} {{ radio.choice_label }}</label>
-      {% endfor %}
-    </fieldset>
-
-    <div x-show="mode === 'text'"{% if mode != "text" %} style="display: none"{% endif %}>
-      {{ form.text.as_field_group }}
+  <a class="back" href="{{ course.get_absolute_url }}">← {{ course.name }}</a>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">{{ course.name }}</div>
+      <h1 class="title-long">Add material</h1>
+      <p class="lead">Choose a PDF or paste your notes.</p>
     </div>
-
-    <div x-show="mode === 'pdf'"{% if mode != "pdf" %} style="display: none"{% endif %}>
-      {{ form.file.as_field_group }}
-      <p class="helptext">Up to {{ max_upload_mb }} MB and {{ max_pages }} pages. The PDF needs selectable text; scanned pages can't be read yet.</p>
-    </div>
-
-    {{ form.title.as_field_group }}
-
-    <div class="actions">
-      <button type="submit" class="button" :disabled="submitting">
-        <span x-show="!submitting">Add material</span>
-        <span x-show="submitting" x-cloak>Reading your notes…</span>
-      </button>
-      <a href="{{ course.get_absolute_url }}">Cancel</a>
-    </div>
-  </form>
-  {% endwith %}
+  </div>
+  {% include "materials/partials/material_form.html" %}
 {% endblock %}

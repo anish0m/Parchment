@@ -59,7 +59,9 @@ def test_add_page_requires_login(client, course):
 def test_add_page_renders_both_modes(auth_client, course):
     content = auth_client.get(add_url(course)).content.decode()
 
-    assert 'x-model="mode"' in content
+    # Tabs switch between the two; a hidden input carries the choice.
+    assert 'data-material-tab="pdf"' in content and 'data-material-tab="text"' in content
+    assert '<input type="hidden" name="source_type" value="pdf">' in content
     assert 'name="text"' in content
     assert 'name="file"' in content
 

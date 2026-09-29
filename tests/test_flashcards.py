@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from django.core.management import CommandError, call_command
 from django.db import IntegrityError
@@ -239,7 +241,7 @@ def test_cannot_attach_another_courses_material(auth_client, course, user, make_
 # --- Editing -----------------------------------------------------------------
 
 
-def test_edit_in_place(auth_client, make_card):
+def test_edit_in_a_modal(auth_client, make_card):
     card = make_card()
     url = reverse("flashcards:update", args=[card.pk])
 
@@ -247,23 +249,28 @@ def test_edit_in_place(auth_client, make_card):
     saved = auth_client.post(url, {"question": "Edited?", "answer": "Yes"}, **HTMX)
     cancel = auth_client.get(reverse("flashcards:detail", args=[card.pk]), **HTMX)
 
-    assert f'<li class="flashcard editing" id="card-{card.pk}"' in form.content.decode()
+    # The modal's form saves into the card's place in the list, then the modal closes.
+    assert "Edit flashcard" in form.content.decode()
+    assert f'hx-target="#card-{card.pk}"' in form.content.decode()
     assert f'<li class="flashcard" id="card-{card.pk}"' in saved.content.decode()
     assert "Edited?" in saved.content.decode()
+    assert json.loads(saved["HX-Trigger"]) == {"parchment:close-modal": {"id": "card-edit-modal"}}
     assert "Edited?" in cancel.content.decode()
     card.refresh_from_db()
     assert card.question == "Edited?"
 
 
-def test_edit_in_place_shows_errors_in_the_form(auth_client, make_card):
+def test_edit_errors_stay_in_the_modal(auth_client, make_card):
     card = make_card()
 
     response = auth_client.post(
         reverse("flashcards:update", args=[card.pk]), {"question": "", "answer": "A"}, **HTMX
     )
 
-    assert "flashcard editing" in response.content.decode()
+    assert "Edit flashcard" in response.content.decode()
     assert "This field is required" in response.content.decode()
+    assert response["HX-Retarget"] == "#card-edit-modal [data-modal-body]"
+    assert response["HX-Reswap"] == "innerHTML"
 
 
 def test_edit_without_javascript_uses_a_full_page(auth_client, course, make_card):
@@ -346,7 +353,7 @@ def test_course_pages_show_card_counts(auth_client, course, make_card, material)
     detail = auth_client.get(course.get_absolute_url()).content.decode()
 
     assert "1 material · 2 cards" in card
-    assert "2 cards." in detail
+    assert "2 cards, grouped by concept" in detail
 
 
 def test_seed_command(user):

@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Q, Value
+from django.db.models import Avg, Count, Q
 from django.db.models.functions import Lower
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
+from flashcards.models import Flashcard
 from materials.views import material_list_context
 from parchment.htmx import is_htmx, paginate, wants_fragment
 from study.views import study_panel_context
@@ -36,6 +38,15 @@ class CourseFormMixin:
         return kwargs
 
 
+def htmx_redirect(request, url):
+    """A full-page redirect, for plain form posts and HTMX (modal) posts alike."""
+    if is_htmx(request):
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = url
+        return response
+    return redirect(url)
+
+
 def with_counts(queryset):
     # Aggregating drops the model's default ordering, so order explicitly.
     return queryset.annotate(
@@ -46,6 +57,8 @@ def with_counts(queryset):
             filter=Q(flashcards__next_review_at__lte=timezone.now()),
             distinct=True,
         ),
+        # Joining materials repeats each card equally often, so the average holds.
+        box_average=Avg("flashcards__box"),
     ).order_by(Lower("name"))
 
 
@@ -76,33 +89,27 @@ class CourseListView(OwnedCourseMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = CourseForm(owner=self.request.user)
+        # "Review across courses": how much is due, and the course with the most.
+        due = Flashcard.objects.filter(
+            course__owner=self.request.user, next_review_at__lte=timezone.now()
+        )
+        context["total_due"] = due.count()
+        context["due_course_count"] = due.values("course").distinct().count()
+        with_due = self.get_queryset().filter(due_count__gt=0)
+        context["busiest"] = with_due.order_by("-due_count", Lower("name")).first()
+        context["open_modal"] = self.request.GET.get("new") == "1"
         return context
 
 
 class CourseCreateView(OwnedCourseMixin, CourseFormMixin, CreateView):
+    """Creates a course. The modal on the course list and profile posts here with HTMX."""
+
     template_name = "courses/course_form.html"
 
     def form_valid(self, form):
         self.object = form.save()
-        if is_htmx(self.request):
-            # Return a blank form and refresh the list out of band, on the page
-            # where the new course sits in alphabetical order.
-            courses = self.get_queryset()
-            before = (
-                courses.annotate(lower_name=Lower("name"))
-                .filter(lower_name__lt=Lower(Value(self.object.name)))
-                .count()
-            )
-            return render(
-                self.request,
-                "courses/partials/course_created.html",
-                {
-                    "form": CourseForm(owner=self.request.user),
-                    **course_list_context(courses, before // COURSES_PER_PAGE + 1),
-                },
-            )
-        messages.success(self.request, f"Created “{self.object.name}”.")
-        return redirect(self.object)
+        messages.success(self.request, f"Created “{self.object.name}”. Add your first material.")
+        return htmx_redirect(self.request, self.object.get_absolute_url())
 
     def form_invalid(self, form):
         if is_htmx(self.request):
@@ -123,16 +130,29 @@ class CourseDetailView(OwnedCourseMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context.update(material_list_context(self.object, self.request.GET.get("page")))
         context.update(study_panel_context(self.object))
+        context["course_form"] = CourseForm(instance=self.object, owner=self.request.user)
         return context
 
 
 class CourseUpdateView(OwnedCourseMixin, CourseFormMixin, UpdateView):
+    """Edits a course. The modal on the course page posts here with HTMX."""
+
     template_name = "courses/course_form.html"
     context_object_name = "course"
 
     def form_valid(self, form):
+        self.object = form.save()
         messages.success(self.request, "Course updated.")
-        return super().form_valid(form)
+        return htmx_redirect(self.request, self.object.get_absolute_url())
+
+    def form_invalid(self, form):
+        if is_htmx(self.request):
+            return render(
+                self.request,
+                "courses/partials/course_form.html",
+                {"form": form, "editing": self.object},
+            )
+        return super().form_invalid(form)
 
 
 class CourseDeleteView(OwnedCourseMixin, DeleteView):
