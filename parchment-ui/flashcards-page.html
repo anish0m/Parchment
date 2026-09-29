@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flashcards — Parchment</title>
+<link rel="icon" type="image/png" href="assets/parchment-logo.png">
+<link rel="stylesheet" href="parchment-theme.css">
+<link rel="stylesheet" href="flashcards-page.css">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="courses-page.html"><img src="assets/parchment-logo.png" alt="Parchment logo"><span>Parchment</span></a>
+    <div class="nav-right">
+      <div class="username">
+        <button class="user-button" data-user-button aria-expanded="false">rifa@example</button>
+        <div class="user-menu" data-user-menu>
+          <a href="profile-page.html">Profile</a>
+          <a href="courses-page.html">All courses</a>
+          <button class="logout" onclick="logout()">Log out</button>
+        </div>
+      </div>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark and light mode"><span data-theme-icon>☾</span></button>
+    </div>
+  </nav>
+</header>
+
+<main class="page-wide">
+<div class="page-head"><div><div class="eyebrow">Study bank</div><h1>Flashcards</h1><p class="lead">Choose from materials that are ready. Processing materials stay visible, but cannot show cards yet.</p></div><button class="btn btn-primary" data-open-modal="flashcard-modal">＋ Add flashcard</button></div>
+<div class="grid grid-2">
+<div><label for="source">Material</label><select id="source"><option value="ready">What If Planet 9 Is a Primordial Black Hole? · Ready</option><option value="ready">The Orbit of Planet Nine · Ready</option><option value="processing">The Planet Nine Hypothesis · Still processing</option></select></div>
+<div><label for="box">Leitner box</label><select id="box"><option>All boxes</option><option>Box 1</option><option>Box 2</option><option>Box 3</option><option>Box 4</option><option>Box 5</option></select></div>
+</div>
+<section class="section"><div class="section-head"><div><h2>11 cards</h2><p class="muted small">From ready materials only.</p></div></div>
+<div class="list">
+<div class="flashcard"><div class="meta"><span class="badge badge-accent">Box 1</span><span class="badge">Generated</span></div><p class="question">What observation motivated the Planet Nine hypothesis?</p><div class="answer">The unusual clustering of distant trans-Neptunian object orbits.</div><div class="actions" style="margin-top:12px"><button class="btn btn-soft btn-small">Edit</button><button class="btn btn-danger btn-small">Delete</button></div></div>
+<div class="flashcard"><div class="meta"><span class="badge badge-accent">Box 2</span><span class="badge">Generated</span></div><p class="question">What is the proposed mass range for Planet Nine?</p><div class="answer">Models commonly place it at several Earth masses.</div></div>
+<div class="flashcard"><div class="meta"><span class="badge badge-accent">Box 3</span><span class="badge">Generated</span></div><p class="question">How could a distant massive body alter trans-Neptunian orbits?</p><div class="answer">Its gravity can perturb and shepherd the orbital paths of distant objects.</div></div>
+</div></section>
+
+<div id="flashcard-modal" class="modal-backdrop"><div class="modal"><div class="modal-head"><div><div class="eyebrow">Your card</div><h2>Add flashcard</h2></div><button class="close" data-close-modal="flashcard-modal">×</button></div><form class="stack"><div class="form-group"><label>Question</label><textarea placeholder="Ask one clear question..."></textarea></div><div class="form-group"><label>Answer</label><textarea placeholder="Write the answer..."></textarea></div><div class="actions"><button type="button" class="btn btn-primary" data-close-modal="flashcard-modal">Add flashcard</button><button type="button" class="btn btn-ghost" data-close-modal="flashcard-modal">Cancel</button></div></form></div></div>
+
+<div id="processing-modal" class="modal-backdrop"><div class="modal"><div class="processing-icon">↻</div><div class="eyebrow">Material still processing</div><h2>Cards aren't ready yet.</h2><p class="muted">This material is still being extracted, clustered and converted into flashcards.</p><div class="notice">You can close this window and continue elsewhere. We'll keep processing the material in the background.</div><div class="processing-track"><div class="progress"><span id="proc-bar" style="width:58%"></span></div><div class="meta" style="justify-content:space-between;margin-top:7px"><span id="proc-status">Clustering concepts…</span><strong id="proc-percent">58%</strong></div></div><div class="actions" style="margin-top:20px"><button class="btn btn-primary" data-close-modal="processing-modal">Continue in background</button></div></div></div>
+</main>
+
+<script src="parchment.js"></script>
+<script src="flashcards-page.js"></script>
+
+</body></html>
