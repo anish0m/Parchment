@@ -353,4 +353,4 @@ def test_course_page_shows_the_three_latest_cards(auth_client, course):
     page = auth_client.get(course.get_absolute_url()).content.decode()
     assert page.count('class="card-preview"') == 3
     assert "Question 4?" in page and "Question 2?" in page and "Question 1?" not in page
-    assert "Show all" in page
+    assert "Show all flashcards" in page

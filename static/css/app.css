@@ -551,3 +551,6 @@ h1.course-title { font-size: clamp(1.75rem, 3vw, 2.4rem); margin: 0; min-width: 
 .card-preview .question { margin: 0; font-weight: 750; color: var(--ink); }
 .card-preview .answer { margin: 0; align-self: stretch; }
 .card-preview .question, .card-preview .answer { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; -webkit-line-clamp: 3; line-clamp: 3; overflow-wrap: anywhere; }
+.text-link { color: var(--peri-strong); font-weight: 800; }
+.text-link::after { content: " →"; }
+.text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
