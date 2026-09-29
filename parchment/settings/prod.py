@@ -1,7 +1,14 @@
 """Production settings."""
 
 from .base import *  # noqa: F403
-from .base import LOGGING, env
+from .base import (
+    ALLOWED_HOSTS,
+    CONTENT_SECURITY_POLICY,
+    CSRF_TRUSTED_ORIGINS,
+    LOGGING,
+    MIDDLEWARE,
+    env,
+)
 
 DEBUG = False
 
@@ -25,3 +32,19 @@ CACHES = {"default": env.cache("CACHE_URL", default="dbcache://parchment_cache")
 
 LOG_FORMAT = env("DJANGO_LOG_FORMAT", default="json")
 LOGGING["handlers"]["console"]["formatter"] = LOG_FORMAT
+
+# Hugging Face Spaces sets SPACE_HOST (e.g. user-parchment.hf.space). Its proxy
+# serves HTTPS itself, and the Space page shows the app in an iframe on
+# huggingface.co, so allow that one site to frame it. The cookies then need
+# SameSite=None to be sent inside the frame; CSRF tokens still protect forms.
+SPACE_HOST = env("SPACE_HOST", default="")
+if SPACE_HOST:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, SPACE_HOST]
+    CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, f"https://{SPACE_HOST}"]
+    SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=False)
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+    CONTENT_SECURITY_POLICY = CONTENT_SECURITY_POLICY.replace(
+        "frame-ancestors 'none'", "frame-ancestors https://huggingface.co"
+    )
+    MIDDLEWARE = [m for m in MIDDLEWARE if not m.endswith(".XFrameOptionsMiddleware")]

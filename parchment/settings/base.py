@@ -126,6 +126,7 @@ Q_CLUSTER = {
     "retry": env.int("Q_TIMEOUT", default=900) + 300,  # must exceed timeout
     "max_attempts": 1,  # failures are shown to the user, who can retry
     "catch_up": False,
+    "poll": env.float("Q_POLL", default=0.2),  # seconds between queue checks
     "sync": env.bool("Q_SYNC", default=False),
     "label": "Background tasks",
 }

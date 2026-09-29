@@ -13,4 +13,13 @@ if [ "${DJANGO_COLLECTSTATIC:-1}" = "1" ]; then
     python manage.py collectstatic --noinput
 fi
 
+# Single-container hosts (e.g. Hugging Face Spaces) run the background worker next
+# to the web server. It's restarted if it exits.
+if [ "${RUN_WORKER:-0}" = "1" ]; then
+    (while true; do
+        python manage.py qcluster || echo "Background worker exited; restarting in 5s"
+        sleep 5
+    done) &
+fi
+
 exec "$@"
