@@ -556,5 +556,6 @@ h1.course-title { font-size: clamp(1.75rem, 3vw, 2.4rem); margin: 0; min-width: 
 .text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .profile-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .profile-name h1 { min-width: 0; overflow-wrap: anywhere; }
-.profile-name .icon-btn { width: 32px; height: 32px; }
-.profile-name .icon-btn svg { width: 16px; height: 16px; }
+.profile-name .icon-btn { width: 30px; height: 30px; border-color: transparent; background: none; }
+.profile-name .icon-btn:hover { border-color: transparent; background: none; }
+.profile-name .icon-btn svg { width: 19px; height: 19px; }
