@@ -51,10 +51,21 @@
     <div class="section-head">
       <div>
         <h2>Flashcards</h2>
-        <p class="muted small">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}, grouped by concept. Edit any card or add your own.{% else %}No flashcards yet. They're generated from your materials, or you can write your own.{% endif %}</p>
+        <p class="muted small">{% if card_count %}{{ card_count }} card{{ card_count|pluralize }}, grouped by concept. Here are the latest.{% else %}No flashcards yet. They're generated from your materials, or you can write your own.{% endif %}</p>
       </div>
-      <a class="btn btn-secondary" href="{% url 'flashcards:list' course.pk %}">{% if card_count %}View flashcards{% else %}Add flashcards{% endif %}</a>
+      <a class="btn btn-secondary" href="{% url 'flashcards:list' course.pk %}">{% if card_count %}Show all{% else %}Add flashcards{% endif %}</a>
     </div>
+    {% if latest_cards %}
+      <ul class="card-preview-grid" aria-label="Latest flashcards">
+        {% for card in latest_cards %}
+          <li class="card-preview">
+            {% if card.concept_label %}<span class="badge badge-accent">{{ card.concept_label }}</span>{% endif %}
+            <p class="question">{{ card.question }}</p>
+            <p class="answer">{{ card.answer }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </section>
 {% endblock %}
 

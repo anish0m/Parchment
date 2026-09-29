@@ -108,6 +108,9 @@ class CourseCreateView(OwnedCourseMixin, CourseFormMixin, CreateView):
         return super().form_invalid(form)
 
 
+LATEST_CARDS = 3
+
+
 class CourseDetailView(OwnedCourseMixin, DetailView):
     template_name = "courses/course_detail.html"
     context_object_name = "course"
@@ -122,6 +125,9 @@ class CourseDetailView(OwnedCourseMixin, DetailView):
         context.update(material_list_context(self.object, self.request.GET.get("page")))
         context.update(study_panel_context(self.object))
         context["course_form"] = CourseForm(instance=self.object, owner=self.request.user)
+        context["latest_cards"] = self.object.flashcards.order_by("-created_at", "-pk")[
+            :LATEST_CARDS
+        ]
         # ?processing=<material pk> opens that material's processing modal.
         processing = self.request.GET.get("processing", "")
         if processing.isdigit():

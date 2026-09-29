@@ -345,3 +345,12 @@ def test_try_again_in_the_modal_returns_the_modal(auth_client, course):
     assert response.status_code == 200
     assert f'id="processing-{material.pk}"' in body
     assert "data-reload-on-close" in body  # the course page refreshes when it closes
+
+
+def test_course_page_shows_the_three_latest_cards(auth_client, course):
+    for n in range(5):
+        Flashcard.objects.create(course=course, question=f"Question {n}?", answer=f"Answer {n}.")
+    page = auth_client.get(course.get_absolute_url()).content.decode()
+    assert page.count('class="card-preview"') == 3
+    assert "Question 4?" in page and "Question 2?" in page and "Question 1?" not in page
+    assert "Show all" in page

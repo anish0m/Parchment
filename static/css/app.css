@@ -544,3 +544,10 @@ h1.course-title { font-size: clamp(1.75rem, 3vw, 2.4rem); margin: 0; min-width: 
 @media (max-width: 820px) {
   .study-link-text { text-align: left; }
 }
+
+/* Course page: the latest few flashcards, three across. */
+.card-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.card-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.card-preview .question { margin: 0; font-weight: 750; color: var(--ink); }
+.card-preview .answer { margin: 0; align-self: stretch; }
+.card-preview .question, .card-preview .answer { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; -webkit-line-clamp: 3; line-clamp: 3; overflow-wrap: anywhere; }
