@@ -14,29 +14,6 @@
 
   {% include "courses/partials/course_list.html" %}
 
-  {% if page_obj.paginator.count %}
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>Review across courses</h2>
-          <p class="muted small">
-            {% if total_due %}
-              {{ total_due }} card{{ total_due|pluralize }} {{ total_due|pluralize:"is,are" }} due in {{ due_course_count }} course{{ due_course_count|pluralize }}.
-              {% if busiest %}“{{ busiest.name }}” has the most waiting.{% endif %}
-            {% else %}
-              Nothing is due today. Cards you answer come back when they're due.
-            {% endif %}
-          </p>
-        </div>
-        {% if busiest %}
-          <form method="post" action="{% url 'study:start' busiest.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-soft">Start with {{ busiest.name|truncatechars:30 }}</button>
-          </form>
-        {% endif %}
-      </div>
-    </section>
-  {% endif %}
 {% endblock %}
 
 {% block modals %}

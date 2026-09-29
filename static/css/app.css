@@ -8,14 +8,14 @@
   --surface: #ffffff;
   --surface-soft: #f5f6ff;
   --ink: #24243d;
-  --muted: #6b6b85;
+  --muted: #74748d;
   --line: #dfe1f2;
   --peri: #918ddd;
-  --peri-strong: #5f5bb8;
+  --peri-strong: #716dc7;
   --peri-soft: #e4e3fb;
   --blue: #a9c5e8;
-  --success: #3f7a63;
-  --danger: #b24a5c;
+  --success: #4c8b73;
+  --danger: #b95868;
   --on-accent: #ffffff;
   --shadow: 0 16px 45px rgba(72, 70, 130, 0.12);
   --radius: 18px;
@@ -159,8 +159,8 @@ h3 { font-size: 1.08rem; margin: 0; }
   min-height: 42px; padding: 0 17px; border-radius: 11px; border: 1px solid transparent;
   font-weight: 800; line-height: 1.2; text-align: center; transition: 0.18s ease;
 }
-.btn-primary { background: var(--peri-strong); color: var(--on-accent); }
-.btn-primary:hover { background: color-mix(in srgb, var(--peri-strong) 85%, var(--ink)); transform: translateY(-1px); }
+.btn-primary { background: var(--peri); color: #fff; }
+.btn-primary:hover { background: var(--peri-strong); transform: translateY(-1px); }
 .btn-secondary { background: transparent; color: var(--peri-strong); border-color: var(--peri); }
 .btn-secondary:hover { background: var(--peri-soft); }
 .btn-soft { background: var(--peri-soft); color: var(--peri-strong); }
@@ -245,10 +245,6 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .course-tile h3 a { color: var(--ink); }
 .course-tile p { margin: 0; }
 .course-tile .actions { margin-top: auto; padding-top: 6px; }
-.course-icon {
-  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
-  background: var(--peri-soft); color: var(--peri-strong); font-weight: 900; text-transform: uppercase;
-}
 /* Tiles stay a similar height however long the name or description is. */
 .course-tile h3, .course-tile .description { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .course-tile h3 { -webkit-line-clamp: 2; line-clamp: 2; }
@@ -286,7 +282,7 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .page-numbers { display: flex; flex-wrap: wrap; gap: 4px; }
 .page-numbers a, .page-numbers span { min-width: 2.2em; padding: 4px 8px; text-align: center; border-radius: 9px; }
 .page-numbers a:hover { background: var(--surface-soft); text-decoration: none; }
-.page-numbers .current { background: var(--peri-strong); color: var(--on-accent); }
+.page-numbers .current { background: var(--peri); color: #fff; }
 
 /* Flashcards */
 .flashcard { padding: 22px 0; border-top: 1px solid var(--line); max-width: 920px; display: grid; gap: 8px; }

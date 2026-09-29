@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.views.generic import DeleteView, DetailView, ListView, UpdateView
 from django.views.generic.edit import CreateView
 
-from flashcards.models import Flashcard
 from materials.views import material_list_context
 from parchment.htmx import is_htmx, paginate, wants_fragment
 from study.views import study_panel_context
@@ -89,14 +88,6 @@ class CourseListView(OwnedCourseMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = CourseForm(owner=self.request.user)
-        # "Review across courses": how much is due, and the course with the most.
-        due = Flashcard.objects.filter(
-            course__owner=self.request.user, next_review_at__lte=timezone.now()
-        )
-        context["total_due"] = due.count()
-        context["due_course_count"] = due.values("course").distinct().count()
-        with_due = self.get_queryset().filter(due_count__gt=0)
-        context["busiest"] = with_due.order_by("-due_count", Lower("name")).first()
         context["open_modal"] = self.request.GET.get("new") == "1"
         return context
 

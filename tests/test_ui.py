@@ -111,19 +111,6 @@ def test_course_list_opens_the_modal_on_request(auth_client):
     assert 'id="course-modal" class="modal-backdrop open"' in page
 
 
-def test_review_across_courses(auth_client, user, make_course, course):
-    other = make_course(user, "Chemistry")
-    for i in range(3):
-        Flashcard.objects.create(course=other, question=f"Q{i}", answer="A")
-    Flashcard.objects.create(course=course, question="Q", answer="A")
-
-    response = auth_client.get(reverse("courses:list"))
-
-    assert (response.context["total_due"], response.context["due_course_count"]) == (4, 2)
-    assert response.context["busiest"] == other
-    assert "Start with Chemistry" in response.content.decode()
-
-
 def test_edit_course_in_the_modal(auth_client, course):
     url = reverse("courses:update", args=[course.pk])
     ok = auth_client.post(url, {"name": "Biology 102", "description": ""}, **HTMX)

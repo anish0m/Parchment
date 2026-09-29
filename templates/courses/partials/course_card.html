@@ -1,6 +1,5 @@
 {% load course_tags humanize %}
 <li class="course-tile" id="course-{{ course.pk }}">
-  <div class="course-icon" aria-hidden="true">{{ course.name|initial }}</div>
   <div class="meta">
     {% if show_activity and course.last_activity %}
       <span class="badge badge-accent">Active {{ course.last_activity|naturaltime }}</span>
