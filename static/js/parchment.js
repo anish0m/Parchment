@@ -212,7 +212,38 @@
     }
   }));
 
+  /* Toasts ------------------------------------------------------------------ */
+  // showToast({ level: "success" | "danger" | "warning" | "info", title, message })
+  const toastIcons = { success: "✓", danger: "✕", warning: "!", info: "i" };
+  const showToast = ({ level = "info", title = "", message = "" } = {}) => {
+    const region = document.querySelector("[data-toasts]");
+    if (!region) return;
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${level}`;
+    toast.innerHTML = '<span class="toast-icon" aria-hidden="true"></span><div class="toast-text"><strong></strong><p></p></div><button type="button" class="toast-close" aria-label="Dismiss">×</button>';
+    toast.querySelector(".toast-icon").textContent = toastIcons[level] || toastIcons.info;
+    toast.querySelector("strong").textContent = title;
+    toast.querySelector("p").textContent = message;
+    // Up to three at once (one on a phone, where they'd cover the page); oldest go first.
+    const limit = window.matchMedia("(max-width: 560px)").matches ? 1 : 3;
+    [...region.children].slice(0, Math.max(region.children.length - limit + 1, 0)).forEach((old) => old.remove());
+    region.append(toast);
+    let timer;
+    const remove = () => {
+      clearTimeout(timer);
+      toast.classList.add("leaving");
+      setTimeout(() => toast.remove(), 200);
+    };
+    const wait = () => { timer = setTimeout(remove, 5000); };
+    toast.addEventListener("mouseenter", () => clearTimeout(timer));
+    toast.addEventListener("mouseleave", wait);
+    toast.querySelector(".toast-close").addEventListener("click", remove);
+    wait();
+  };
+  window.showToast = showToast;
+
   /* Server-sent instructions (HX-Trigger headers) --------------------------- */
+  document.addEventListener("parchment:toast", (event) => showToast(event.detail));
   document.addEventListener("parchment:close-modal", (event) => closeModal(event.detail.id || event.detail.value));
   document.addEventListener("parchment:open-modal", (event) => openModal(event.detail.id || event.detail.value));
 
