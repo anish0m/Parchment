@@ -354,11 +354,11 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
   background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--peri);
   border-radius: 0 0 18px 18px; box-shadow: var(--shadow);
 }
-.flip-card-front { cursor: pointer; }
+.flip-card-face { cursor: pointer; }
+.flip-hint { margin: 0; }
 .flip-card-back { transform: rotateY(180deg); }
 .study-question { font-family: var(--serif); font-size: clamp(1.45rem, 3vw, 2.2rem); line-height: 1.45; max-width: 720px; margin: 18px auto 28px; }
 .study-answer { font-family: var(--serif); font-size: clamp(1.3rem, 2.6vw, 1.9rem); line-height: 1.45; max-width: 680px; margin: 18px auto 22px; }
-.study-recap { max-width: 600px; margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }
 .rating-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
 .rating-row form { margin: 0; }
 .rating-row .btn { min-width: 150px; }
