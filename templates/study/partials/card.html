@@ -37,16 +37,21 @@
     <span style="width: {{ progress }}%"></span>
   </div>
 
+  {# A two-sided card: the question on the front, the answer on the back. Showing the answer flips it. #}
   <div class="study-card" x-ref="card" tabindex="-1">
-    <div class="eyebrow">{% if session.mode == "practice" %}Extra practice · {% endif %}{% if card.concept_label %}{{ card.concept_label }} · {% endif %}Box {{ card.box }}</div>
-    <div class="study-question">{{ card.question|linebreaksbr }}</div>
-
-    <button type="button" class="btn btn-primary" x-show="!revealed" @click="reveal()">Show answer <kbd>Space</kbd></button>
-
-    <div class="study-answer revealing" x-show="revealed" x-cloak>
-      <strong>Answer</strong>
-      <p>{{ card.answer|linebreaksbr }}</p>
+    <div class="flip-card" :class="{ flipped: revealed }">
+      <div class="flip-card-face flip-card-front" :inert="revealed" :aria-hidden="revealed" @click="reveal()">
+        <div class="eyebrow">{% if session.mode == "practice" %}Extra practice · {% endif %}{% if card.concept_label %}{{ card.concept_label }} · {% endif %}Box {{ card.box }}</div>
+        <div class="study-question">{{ card.question|linebreaksbr }}</div>
+        <button type="button" class="btn btn-primary" @click.stop="reveal()">Show answer <kbd>Space</kbd></button>
+      </div>
+      <div class="flip-card-face flip-card-back" inert aria-hidden="true" :inert="!revealed" :aria-hidden="!revealed">
+        <div class="eyebrow">Answer</div>
+        <div class="study-answer">{{ card.answer|linebreaksbr }}</div>
+        <p class="study-recap muted small">{{ card.question|truncatechars:160 }}</p>
+      </div>
     </div>
+
     <div class="rating-row" x-show="revealed" x-cloak>
       <form method="post" action="{% url 'study:answer' session.pk %}" x-ref="missedIt"
             hx-post="{% url 'study:answer' session.pk %}" hx-target="#study-stage">
