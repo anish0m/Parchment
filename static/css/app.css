@@ -342,7 +342,7 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .study-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; color: var(--muted); font-size: 0.86rem; margin-bottom: 14px; }
 .study-top form { margin: 0; }
 .study { display: grid; gap: 18px; }
-.study-card { max-width: 850px; width: 100%; margin: auto; text-align: center; outline: none; perspective: 1800px; }
+.study-card { max-width: 850px; width: 100%; margin: auto; text-align: center; outline: none; perspective: 1800px; position: relative; z-index: 0; isolation: isolate; }
 /* Both faces share one grid cell, so the card is as tall as its longer side. */
 .flip-card { display: grid; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); margin-bottom: 22px; }
 .flip-card.flipped { transform: rotateY(180deg); }
@@ -364,7 +364,10 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .study-feedback { max-width: 600px; margin: 0 auto 12px; }
 .flip-hint { margin: 0; }
 .next-row { display: flex; justify-content: center; }
-.answer-modal-question { font-family: var(--serif); font-weight: 500; font-size: 1.3rem; line-height: 1.4; }
+#answer-modal .modal-head { align-items: center; margin-bottom: 16px; }
+#answer-modal .modal-head h2 { margin: 0; font-size: 1.25rem; }
+.answer-form { display: flex; gap: 10px; margin: 0; }
+.answer-form input[type="text"] { flex: 1; min-width: 0; }
 .flip-card-back { transform: rotateY(180deg); }
 .study-question { font-family: var(--serif); font-size: clamp(1.45rem, 3vw, 2.2rem); line-height: 1.45; max-width: 720px; margin: 18px auto 28px; }
 .study-answer { font-family: var(--serif); font-size: clamp(1.3rem, 2.6vw, 1.9rem); line-height: 1.45; max-width: 680px; margin: 18px auto 22px; }

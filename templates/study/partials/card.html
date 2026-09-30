@@ -90,32 +90,21 @@ HTMX loads the next card when asked.
   {# Modals sit outside the 3D card so they're positioned against the page. #}
   <div id="answer-modal" class="modal-backdrop" role="dialog" aria-modal="true"
        aria-labelledby="answer-modal-title" aria-hidden="true">
-    <div class="modal">
+    <div class="modal small">
       <div class="modal-head">
-        <div>
-          <div class="eyebrow">Your answer</div>
-          <h2 id="answer-modal-title" class="answer-modal-question">{{ card.question|linebreaksbr }}</h2>
-        </div>
+        <h2 id="answer-modal-title">Your answer</h2>
         <button type="button" class="close" data-close-modal="answer-modal" aria-label="Close">×</button>
       </div>
-      <form method="post" action="{% url 'study:check' session.pk %}" class="form"
+      <form method="post" action="{% url 'study:check' session.pk %}" class="answer-form"
             hx-post="{% url 'study:check' session.pk %}" hx-target="#card-result" hx-swap="innerHTML"
             hx-disabled-elt="find button[type='submit']">
         {% csrf_token %}
         <input type="hidden" name="card" value="{{ card.pk }}">
-        <div>
-          <label for="answer-input" class="sr-only">Your answer</label>
-          <textarea id="answer-input" name="response" rows="3" maxlength="1000" required autofocus
-                    autocomplete="off" placeholder="Type what you remember…"
-                    @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $el.form.requestSubmit() }"></textarea>
-          <span class="helptext">Enter checks it; Shift+Enter starts a new line. Wording doesn't have to match.</span>
-        </div>
-        <div class="actions">
-          <button type="submit" class="btn btn-primary">
-            <span class="when-idle">Check answer</span><span class="when-busy">Checking…</span>
-          </button>
-          <button type="button" class="btn btn-ghost" data-close-modal="answer-modal">Cancel</button>
-        </div>
+        <input type="text" name="response" maxlength="1000" required autofocus autocomplete="off"
+               aria-labelledby="answer-modal-title">
+        <button type="submit" class="btn btn-primary">
+          <span class="when-idle">Submit</span><span class="when-busy">Checking…</span>
+        </button>
       </form>
     </div>
   </div>
