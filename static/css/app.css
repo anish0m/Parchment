@@ -16,6 +16,7 @@
   --blue: #a9c5e8;
   --success: #4c8b73;
   --danger: #b95868;
+  --warning: #a97a1f;
   --on-accent: #ffffff;
   --shadow: 0 16px 45px rgba(72, 70, 130, 0.12);
   --radius: 18px;
@@ -37,6 +38,7 @@ html[data-theme="dark"] {
   --blue: #829fc6;
   --success: #71b99c;
   --danger: #ed7d8e;
+  --warning: #e3b95f;
   --on-accent: #16172b;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -344,18 +346,32 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .study-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; color: var(--muted); font-size: 0.86rem; margin-bottom: 14px; }
 .study-top form { margin: 0; }
 .study { display: grid; gap: 18px; }
-.study-card {
-  max-width: 850px; width: 100%; margin: auto; text-align: center; padding: 42px 30px;
-  border-top: 3px solid var(--peri); border-radius: 0 0 18px 18px;
-  background: color-mix(in srgb, var(--surface) 60%, transparent); outline: none;
+.study-card { max-width: 850px; width: 100%; margin: auto; text-align: center; outline: none; perspective: 1800px; }
+/* Both faces share one grid cell, so the card is as tall as its longer side. */
+.flip-card { display: grid; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); margin-bottom: 22px; }
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-card-face {
+  grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 340px; padding: 42px 30px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--peri);
+  border-radius: 0 0 18px 18px; box-shadow: var(--shadow);
 }
+.flip-card.answered .flip-card-face { cursor: pointer; }
+.card-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.card-actions form { margin: 0; }
+.study-result { width: 100%; }
+.verdict-correct { color: var(--success); }
+.verdict-wrong { color: var(--danger); }
+.verdict-skipped { color: var(--warning); }
+.study-given { max-width: 600px; margin: 0 auto 14px; padding: 11px 15px; text-align: left; border-radius: 12px; background: var(--surface-soft); }
+.study-given p { margin: 0.2rem 0 0; }
+.study-feedback { max-width: 600px; margin: 0 auto 12px; }
+.flip-hint { margin: 0; }
+.next-row { display: flex; justify-content: center; }
+.answer-modal-question { font-family: var(--serif); font-weight: 500; font-size: 1.3rem; line-height: 1.4; }
+.flip-card-back { transform: rotateY(180deg); }
 .study-question { font-family: var(--serif); font-size: clamp(1.45rem, 3vw, 2.2rem); line-height: 1.45; max-width: 720px; margin: 18px auto 28px; }
-.study-answer { max-width: 680px; margin: 0 auto 25px; text-align: left; padding: 18px; background: var(--surface-soft); border-left: 3px solid var(--peri); border-radius: 0 14px 14px 0; }
-.study-answer p { margin: 0.3rem 0 0; font-size: 1.05rem; }
-.study-answer.revealing { animation: rise 0.25s ease; }
-.rating-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
-.rating-row form { margin: 0; }
-.rating-row .btn { min-width: 150px; }
+.study-answer { font-family: var(--serif); font-size: clamp(1.3rem, 2.6vw, 1.9rem); line-height: 1.45; max-width: 680px; margin: 18px auto 22px; }
 .study-hint { margin: 0; text-align: center; }
 @media (hover: none) and (pointer: coarse) {
   .study-hint, .study-card kbd { display: none; }
@@ -477,9 +493,7 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
   .hero-art .hero-art-image { width: 190px; height: 150px; margin-right: -95px; top: 50px; }
   .modal { padding: 21px; }
   .list-row { flex-direction: column; align-items: flex-start; }
-  .study-card { padding: 30px 16px; }
-  .rating-row .btn { min-width: 0; flex: 1; }
-  .rating-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .flip-card-face { padding: 30px 16px; min-height: 280px; }
   .stat-strip { grid-template-columns: 1fr; }
   .stat-strip .stat:nth-child(2n) { border-left: 0; }
   .stat-strip .stat + .stat { border-top: 1px solid var(--line); }
@@ -559,3 +573,26 @@ h1.course-title { font-size: clamp(1.75rem, 3vw, 2.4rem); margin: 0; min-width: 
 .profile-name .icon-btn { width: 30px; height: 30px; border-color: transparent; background: none; }
 .profile-name .icon-btn:hover { border-color: transparent; background: none; }
 .profile-name .icon-btn svg { width: 19px; height: 19px; }
+
+/* Toasts: short notices in the top-right corner (static/js/parchment.js shows them). */
+.toasts { position: fixed; top: 84px; right: 20px; z-index: 1000; display: grid; gap: 10px; width: min(360px, calc(100% - 32px)); pointer-events: none; }
+.toast {
+  --tone: var(--peri);
+  display: flex; align-items: flex-start; gap: 12px; padding: 13px 14px; pointer-events: auto;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--tone) 40%, var(--line));
+  border-left: 4px solid var(--tone); border-radius: 12px; box-shadow: var(--shadow);
+  animation: toast-in 0.25s ease;
+}
+.toast.leaving { opacity: 0; transform: translateX(12px); transition: opacity 0.2s ease, transform 0.2s ease; }
+.toast-success { --tone: var(--success); }
+.toast-danger { --tone: var(--danger); }
+.toast-warning { --tone: var(--warning); }
+.toast-icon { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--tone); color: var(--on-accent); font-size: 0.8rem; font-weight: 850; }
+.toast-text { flex: 1; min-width: 0; }
+.toast-text strong { display: block; color: var(--tone); }
+.toast-text p { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
+.toast-close { flex: none; border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 4px; cursor: pointer; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+@media (max-width: 560px) {
+  .toasts { top: 76px; right: 16px; }
+}

@@ -159,7 +159,9 @@ A correct answer moves the card up one box (box 5 stays in box 5); a wrong one s
 
 Each course page has a **Study** panel with the number of cards due; the dashboard shows it on every course. **Study now** starts a session that goes through the due cards one at a time:
 
-- Click the card or press **Space** to flip it, then answer **Missed it** (**1** or **←**) or **Got it** (**2** or **→**). Each answer is posted with HTMX and the next card slides in without a page reload.
+- **Answer it** (**A**) opens a box to type the answer. The server checks it: a close match or one with all the card's key words counts straight away, and anything less clear is judged by Gemini or Claude when a key is set (else by how many key words it has). The card turns over to show its answer, and a toast says whether it was right. Nobody grades their own answer.
+- **Show answer** (**S**) turns the card over without trying; it counts as missed.
+- Once answered, click the card or press **Space** to turn it back and forth, and **Next card** (**Enter**) loads the next one with HTMX. The answer isn't in the page before then.
 - Each card appears once per session. A missed card goes back to box 1 and comes back tomorrow.
 - When nothing is due, **Study anyway** starts an extra-practice session of up to 20 cards, soonest due first. These answers move cards between boxes like any other.
 - The session ends by itself when the cards run out, or with **End session**, and shows a summary: cards reviewed, % correct, cards moved up or back to box 1, and when the next card is due.
@@ -272,6 +274,7 @@ All settings come from environment variables (see `.env.example`):
 | `ANTHROPIC_API_KEY` | — | Paid; lets Claude write the flashcards |
 | `CARD_GENERATOR` | `auto` | `auto` (Gemini if key set, else Claude, else rules), `gemini`, `claude` or `rules` |
 | `CARD_GENERATION_GEMINI_MODEL` | `gemini-flash-latest` | Gemini model for card writing |
+| `ANSWER_GRADER` | `auto` | Checks typed answers while studying: `auto` (Gemini or Claude, as above), `gemini`, `claude` or `local` (key-word comparison) |
 | `CARD_GENERATION_MODEL` | `claude-opus-5` | Claude model for card writing |
 | `CARD_GENERATION_EFFORT` | `medium` | `low`, `medium` or `high`: how much Claude thinks per request |
 | `EMBEDDING_BACKEND` | `auto` | `auto`, `sentence-transformers` or `tfidf` |

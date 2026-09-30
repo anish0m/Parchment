@@ -1,0 +1,15 @@
+{# The back of a study card once it's been answered or skipped: the verdict and the card's answer. #}
+<div class="study-result" x-init="$dispatch('card-answered')">
+  <div class="eyebrow verdict {% if skipped %}verdict-skipped{% elif correct %}verdict-correct{% else %}verdict-wrong{% endif %}">
+    {% if skipped %}Skipped{% elif correct %}Correct{% else %}Not quite{% endif %} · box {{ log.box_after }}
+  </div>
+  <div class="study-answer">{{ card.answer|linebreaksbr }}</div>
+  {% if given is not None %}
+    <div class="study-given">
+      <span class="muted small">Your answer</span>
+      <p>{{ given|linebreaksbr }}</p>
+    </div>
+  {% endif %}
+  {% if feedback %}<p class="study-feedback muted">{{ feedback }}</p>{% endif %}
+  <p class="muted small flip-hint">Tap the card to see the question again</p>
+</div>

@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -45,12 +46,22 @@ def start_url(course):
     return reverse("study:start", args=[course.pk])
 
 
-def answer(client, session, card, correct, htmx=True):
+def check(client, session, card, response, htmx=True):
     return client.post(
-        reverse("study:answer", args=[session.pk]),
-        {"card": card.pk, "correct": "1" if correct else "0"},
+        reverse("study:check", args=[session.pk]),
+        {"card": card.pk, "response": response},
         **(HTMX if htmx else {}),
     )
+
+
+def answer(client, session, card, correct):
+    """Type the card's answer (or a wrong one), then load the next card like "Next card"."""
+    check(client, session, card, card.answer if correct else "no idea at all")
+    return client.get(session.get_absolute_url(), **HTMX)
+
+
+def toast(response):
+    return json.loads(response["HX-Trigger"])["parchment:toast"]
 
 
 # --- Course page and dashboard ----------------------------------------------------
@@ -166,7 +177,7 @@ def test_session_shows_lowest_box_first(auth_client, course, make_card):
     assert response.status_code == 200
     assert response.context["card"].question == "Box 1"
     assert "Card 1 of 2" in response.text
-    assert "Answer to Box 1" in response.text  # on the back of the card
+    assert "Answer to Box 1" not in response.text  # sent only once answered
 
 
 def test_session_is_private(client, other_user, course, make_card):
@@ -174,7 +185,7 @@ def test_session_is_private(client, other_user, course, make_card):
     session = start_session(course)
     client.force_login(other_user)
     assert client.get(session.get_absolute_url()).status_code == 404
-    assert answer(client, session, course.flashcards.get(), True).status_code == 404
+    assert check(client, session, course.flashcards.get(), "x").status_code == 404
     assert client.post(reverse("study:end", args=[session.pk])).status_code == 404
     assert not ReviewLog.objects.exists()
 
@@ -218,26 +229,97 @@ def test_repeated_answers_are_ignored(auth_client, course, make_card):
     assert card.box == 3
 
 
-def test_answer_validation(auth_client, course, make_card, user, make_course):
+def test_check_validation(auth_client, course, make_card, user, make_course):
     card = make_card()
     session = start_session(course)
-    url = reverse("study:answer", args=[session.pk])
+    url = reverse("study:check", args=[session.pk])
 
-    assert auth_client.post(url, {"card": card.pk, "correct": "maybe"}).status_code == 400
-    assert auth_client.post(url, {"correct": "1"}).status_code == 404
-    assert auth_client.post(url, {"card": "abc", "correct": "1"}).status_code == 404
+    assert auth_client.post(url, {"card": card.pk, "response": "  "}).status_code == 400
+    assert auth_client.post(url, {"response": "x"}).status_code == 404
+    assert auth_client.post(url, {"card": "abc", "response": "x"}).status_code == 404
     other = Flashcard.objects.create(course=make_course(user, "Other"), question="Q", answer="A")
-    assert auth_client.post(url, {"card": other.pk, "correct": "1"}).status_code == 404
+    assert auth_client.post(url, {"card": other.pk, "response": "A"}).status_code == 404
     assert auth_client.get(url).status_code == 405
+    assert auth_client.get(reverse("study:skip", args=[session.pk])).status_code == 405
     assert not ReviewLog.objects.exists()
 
 
-def test_answer_without_htmx_redirects(auth_client, course, make_card):
+def test_check_without_htmx_redirects(auth_client, course, make_card):
     card = make_card()
     make_card("Next")
     session = start_session(course)
-    response = answer(auth_client, session, card, True, htmx=False)
+    response = check(auth_client, session, card, card.answer, htmx=False)
     assert response.status_code == 302 and response.url == session.get_absolute_url()
+    assert ReviewLog.objects.get().was_correct
+
+
+def test_the_answer_is_not_in_the_page_before_answering(auth_client, course, make_card):
+    card = make_card()
+    session = start_session(course)
+    text = auth_client.get(session.get_absolute_url()).text
+    assert card.question in text
+    assert card.answer not in text
+
+
+def test_a_correct_typed_answer(auth_client, course, make_card):
+    card = make_card(box=2)
+    session = start_session(course)
+
+    response = check(auth_client, session, card, "answer to what is OSMOSIS")
+
+    assert response.status_code == 200
+    assert card.answer in response.text and "Your answer" in response.text
+    assert "Correct" in response.text
+    assert toast(response) == {
+        "level": "success",
+        "title": "Correct!",
+        "message": "Moved up to box 3.",
+    }
+    assert json.loads(response["HX-Trigger"])["parchment:close-modal"] == {"id": "answer-modal"}
+    card.refresh_from_db()
+    assert card.box == 3
+    session.refresh_from_db()
+    assert (session.cards_reviewed, session.cards_correct) == (1, 1)
+
+
+def test_a_wrong_typed_answer(auth_client, course, make_card):
+    card = make_card(box=3)
+    session = start_session(course)
+
+    response = check(auth_client, session, card, "photosynthesis")
+
+    assert "Not quite" in response.text and card.answer in response.text
+    assert toast(response)["level"] == "danger"
+    card.refresh_from_db()
+    assert card.box == 1
+    assert not ReviewLog.objects.get().was_correct
+
+
+def test_showing_the_answer_counts_as_missed(auth_client, course, make_card):
+    card = make_card(box=4)
+    session = start_session(course)
+
+    response = auth_client.post(reverse("study:skip", args=[session.pk]), {"card": card.pk}, **HTMX)
+
+    assert "Skipped" in response.text and card.answer in response.text
+    assert "Your answer" not in response.text
+    assert toast(response)["level"] == "warning"
+    card.refresh_from_db()
+    assert card.box == 1
+    session.refresh_from_db()
+    assert (session.cards_reviewed, session.cards_correct) == (1, 0)
+
+
+def test_a_repeat_submit_shows_the_stage(auth_client, course, make_card):
+    card = make_card()
+    make_card("Other")
+    session = start_session(course)
+    check(auth_client, session, card, card.answer)
+
+    again = auth_client.post(reverse("study:skip", args=[session.pk]), {"card": card.pk}, **HTMX)
+
+    assert again["HX-Retarget"] == "#study-stage"
+    assert again.context["card"].question == "Other"
     assert ReviewLog.objects.count() == 1
 
 
@@ -304,8 +386,9 @@ def test_card_page_has_keyboard_and_accessibility_hooks(auth_client, course, mak
     text = auth_client.get(session.get_absolute_url()).text
     assert '@keydown.window="onKey($event)"' in text
     assert 'role="progressbar"' in text
-    assert 'aria-live="polite"' in text
-    assert "<kbd>Space</kbd>" in text
+    assert 'aria-live="polite"' in text  # the toasts
+    assert "<kbd>A</kbd>" in text and "<kbd>S</kbd>" in text
+    assert 'id="answer-modal"' in text
 
 
 # --- Progress ---------------------------------------------------------------------

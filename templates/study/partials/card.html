@@ -1,25 +1,43 @@
-{# One card of a study session. Alpine reveals the answer; HTMX posts it and swaps in the next card. #}
+{% comment %}
+One card of a study session. The answer is typed and checked on the server, or shown
+without trying (counted as missed); either way the card turns over to show it, and
+HTMX loads the next card when asked.
+{% endcomment %}
 <div class="study"
      x-data="{
-       revealed: false,
+       answered: false,
+       flipped: false,
        busy: false,
-       reveal() { if (!this.busy) this.revealed = true },
-       answer(correct) {
-         if (!this.revealed || this.busy) return;
-         (correct ? $refs.gotIt : $refs.missedIt).requestSubmit();
+       flip() {
+         if (!this.answered || this.busy) return;
+         this.flipped = !this.flipped;
+         $refs.card.focus({ preventScroll: true });
+       },
+       showResult() {
+         this.answered = true;
+         this.flipped = true;
+         this.busy = false;
+         $nextTick(() => $refs.card.focus({ preventScroll: true }));
+       },
+       openAnswer() {
+         if (this.answered || this.busy) return;
+         window.openModal('answer-modal', $refs.answerButton);
        },
        onKey(event) {
          if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
          if (document.querySelector('.modal-backdrop.open')) return;
          if (event.target.closest('input, textarea, select, button, a, [contenteditable]')) return;
-         const key = event.key;
-         if (key === ' ' || key === 'Enter') { event.preventDefault(); this.reveal(); }
-         else if (key === '1' || key === 'ArrowLeft') { if (this.revealed) { event.preventDefault(); this.answer(false); } }
-         else if (key === '2' || key === 'ArrowRight') { if (this.revealed) { event.preventDefault(); this.answer(true); } }
+         const key = event.key.toLowerCase();
+         if (!this.answered) {
+           if (key === 'a' || key === 'enter') { event.preventDefault(); this.openAnswer(); }
+           else if (key === 's') { event.preventDefault(); $refs.skip.requestSubmit(); }
+         } else if (key === ' ') { event.preventDefault(); this.flip(); }
+         else if (key === 'enter' || key === 'arrowright') { event.preventDefault(); $refs.next.click(); }
        },
      }"
      x-init="$nextTick(() => $refs.card.focus({ preventScroll: true }))"
      @keydown.window="onKey($event)"
+     @card-answered="showResult()"
      @htmx:before-request="busy = true"
      @htmx:after-request="if (!$event.detail.successful) busy = false">
 
@@ -37,36 +55,72 @@
     <span style="width: {{ progress }}%"></span>
   </div>
 
+  {% comment %}
+  A two-sided card: the question on the front, the answer on the back. Once answered,
+  clicking it turns it over either way. The answer isn't in the page until then.
+  {% endcomment %}
   <div class="study-card" x-ref="card" tabindex="-1">
-    <div class="eyebrow">{% if session.mode == "practice" %}Extra practice · {% endif %}{% if card.concept_label %}{{ card.concept_label }} · {% endif %}Box {{ card.box }}</div>
-    <div class="study-question">{{ card.question|linebreaksbr }}</div>
-
-    <button type="button" class="btn btn-primary" x-show="!revealed" @click="reveal()">Show answer <kbd>Space</kbd></button>
-
-    <div class="study-answer revealing" x-show="revealed" x-cloak>
-      <strong>Answer</strong>
-      <p>{{ card.answer|linebreaksbr }}</p>
+    <div class="flip-card" :class="{ flipped, answered }" @click="flip()">
+      <div class="flip-card-face flip-card-front" :inert="flipped">
+        <div class="eyebrow">{% if session.mode == "practice" %}Extra practice · {% endif %}{% if card.concept_label %}{{ card.concept_label }} · {% endif %}Box {{ card.box }}</div>
+        <div class="study-question">{{ card.question|linebreaksbr }}</div>
+        <div class="card-actions" x-show="!answered">
+          <button type="button" class="btn btn-primary" x-ref="answerButton" @click.stop="openAnswer()" :disabled="busy">
+            Answer it <kbd>A</kbd>
+          </button>
+          <form method="post" action="{% url 'study:skip' session.pk %}" x-ref="skip"
+                hx-post="{% url 'study:skip' session.pk %}" hx-target="#card-result" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="card" value="{{ card.pk }}">
+            <button type="submit" class="btn btn-ghost" @click.stop :disabled="busy">Show answer <kbd>S</kbd></button>
+          </form>
+        </div>
+      </div>
+      <div class="flip-card-face flip-card-back" inert :inert="!flipped" id="card-result"></div>
     </div>
-    <div class="rating-row" x-show="revealed" x-cloak>
-      <form method="post" action="{% url 'study:answer' session.pk %}" x-ref="missedIt"
-            hx-post="{% url 'study:answer' session.pk %}" hx-target="#study-stage">
-        {% csrf_token %}
-        <input type="hidden" name="card" value="{{ card.pk }}">
-        <input type="hidden" name="correct" value="0">
-        <button type="submit" class="btn btn-danger" :disabled="busy">Missed it <kbd>1</kbd></button>
-      </form>
-      <form method="post" action="{% url 'study:answer' session.pk %}" x-ref="gotIt"
-            hx-post="{% url 'study:answer' session.pk %}" hx-target="#study-stage">
-        {% csrf_token %}
-        <input type="hidden" name="card" value="{{ card.pk }}">
-        <input type="hidden" name="correct" value="1">
-        <button type="submit" class="btn btn-primary" :disabled="busy">Got it <kbd>2</kbd></button>
-      </form>
+
+    <div class="next-row" x-show="answered" x-cloak>
+      <button type="button" class="btn btn-primary" x-ref="next"
+              hx-get="{% url 'study:session' session.pk %}" hx-target="#study-stage" :disabled="busy">
+        Next card <kbd>Enter</kbd>
+      </button>
     </div>
-    <p class="muted small" x-show="revealed" x-cloak style="margin: 14px 0 0">Got it moves the card up a box; missed it sends it back to box 1.</p>
   </div>
 
-  {# Screen readers hear the answer when it's revealed. #}
-  <div class="sr-only" aria-live="polite"><template x-if="revealed"><p>Answer: {{ card.answer }}</p></template></div>
-  <p class="study-hint muted small">Keys: Space shows the answer · 1 or ← missed it · 2 or → got it</p>
+  {# Modals sit outside the 3D card so they're positioned against the page. #}
+  <div id="answer-modal" class="modal-backdrop" role="dialog" aria-modal="true"
+       aria-labelledby="answer-modal-title" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">Your answer</div>
+          <h2 id="answer-modal-title" class="answer-modal-question">{{ card.question|linebreaksbr }}</h2>
+        </div>
+        <button type="button" class="close" data-close-modal="answer-modal" aria-label="Close">×</button>
+      </div>
+      <form method="post" action="{% url 'study:check' session.pk %}" class="form"
+            hx-post="{% url 'study:check' session.pk %}" hx-target="#card-result" hx-swap="innerHTML"
+            hx-disabled-elt="find button[type='submit']">
+        {% csrf_token %}
+        <input type="hidden" name="card" value="{{ card.pk }}">
+        <div>
+          <label for="answer-input" class="sr-only">Your answer</label>
+          <textarea id="answer-input" name="response" rows="3" maxlength="1000" required autofocus
+                    autocomplete="off" placeholder="Type what you remember…"
+                    @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $el.form.requestSubmit() }"></textarea>
+          <span class="helptext">Enter checks it; Shift+Enter starts a new line. Wording doesn't have to match.</span>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">
+            <span class="when-idle">Check answer</span><span class="when-busy">Checking…</span>
+          </button>
+          <button type="button" class="btn btn-ghost" data-close-modal="answer-modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <p class="study-hint muted small">
+    Keys: A answers · S shows the answer (counts as missed) · then Space turns the card over and Enter goes on
+  </p>
 </div>
