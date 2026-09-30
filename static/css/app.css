@@ -329,10 +329,6 @@ a.badge:hover { border-color: var(--peri); text-decoration: none; }
 .file-drop:hover, .file-drop.dragging { border-color: var(--peri-strong); }
 .file-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .file-drop:focus-within { outline: 3px solid var(--peri); outline-offset: 2px; }
-.processing-icon { width: 62px; height: 62px; border-radius: 18px; background: var(--peri-soft); display: grid; place-items: center; font-size: 1.55rem; color: var(--peri-strong); margin-bottom: 16px; }
-.processing-icon.spinning span { display: inline-block; animation: spin 1.6s linear infinite; }
-.processing-icon.done { color: var(--success); background: color-mix(in srgb, var(--success) 14%, var(--surface)); }
-.processing-icon.failed { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
 .processing-track { margin: 20px 0 9px; }
 .steps { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 6px; font-size: 0.86rem; color: var(--muted); }
 .steps li::before { content: "○"; display: inline-block; width: 1.4em; }
