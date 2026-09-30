@@ -1,7 +1,7 @@
 """Production settings."""
 
 from .base import *  # noqa: F403
-from .base import LOGGING, env
+from .base import ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, LOGGING, env
 
 DEBUG = False
 
@@ -25,3 +25,9 @@ CACHES = {"default": env.cache("CACHE_URL", default="dbcache://parchment_cache")
 
 LOG_FORMAT = env("DJANGO_LOG_FORMAT", default="json")
 LOGGING["handlers"]["console"]["formatter"] = LOG_FORMAT
+
+# Render gives each service a hostname (e.g. parchment.onrender.com) in this variable.
+RENDER_HOST = env("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_HOST:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, RENDER_HOST]
+    CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, f"https://{RENDER_HOST}"]

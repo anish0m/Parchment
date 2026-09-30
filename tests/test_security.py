@@ -74,7 +74,13 @@ def id_urls():
 
 def test_the_sweep_finds_the_id_urls():
     names = {name for name, _ in id_urls()}
-    assert {"courses:detail", "materials:file", "study:answer", "api:flashcard-review"} <= names
+    assert {
+        "courses:detail",
+        "materials:file",
+        "study:check",
+        "study:skip",
+        "api:flashcard-review",
+    } <= names
 
 
 @pytest.mark.parametrize("method", ["get", "post"])

@@ -126,6 +126,7 @@ Q_CLUSTER = {
     "retry": env.int("Q_TIMEOUT", default=900) + 300,  # must exceed timeout
     "max_attempts": 1,  # failures are shown to the user, who can retry
     "catch_up": False,
+    "poll": env.float("Q_POLL", default=0.2),  # seconds between queue checks
     "sync": env.bool("Q_SYNC", default=False),
     "label": "Background tasks",
 }
@@ -138,6 +139,9 @@ CARD_GENERATOR = env("CARD_GENERATOR", default="auto")
 CARD_GENERATION_MODEL = env("CARD_GENERATION_MODEL", default="claude-opus-5")
 CARD_GENERATION_EFFORT = env("CARD_GENERATION_EFFORT", default="medium")
 CARD_GENERATION_GEMINI_MODEL = env("CARD_GENERATION_GEMINI_MODEL", default="gemini-flash-latest")
+# ANSWER_GRADER checks typed answers that aren't a plain match: "auto" uses Gemini or
+# Claude like CARD_GENERATOR does, "local" (or no key) compares key words instead.
+ANSWER_GRADER = env("ANSWER_GRADER", default="auto")
 # EMBEDDING_BACKEND: "auto" uses sentence-transformers when installed and the model
 # loads, else TF-IDF; "sentence-transformers" or "tfidf" force one.
 EMBEDDING_BACKEND = env("EMBEDDING_BACKEND", default="auto")

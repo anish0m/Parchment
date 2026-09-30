@@ -159,7 +159,9 @@ A correct answer moves the card up one box (box 5 stays in box 5); a wrong one s
 
 Each course page has a **Study** panel with the number of cards due; the dashboard shows it on every course. **Study now** starts a session that goes through the due cards one at a time:
 
-- Click the card or press **Space** to flip it, then answer **Missed it** (**1** or **←**) or **Got it** (**2** or **→**). Each answer is posted with HTMX and the next card slides in without a page reload.
+- **Answer it** (**A**) opens a box to type the answer. The server checks it: a close match or one with all the card's key words counts straight away, and anything less clear is judged by Gemini or Claude when a key is set (else by how many key words it has). The card turns over to show its answer, and a toast says whether it was right. Nobody grades their own answer.
+- **Show answer** (**S**) turns the card over without trying; it counts as missed.
+- Once answered, click the card or press **Space** to turn it back and forth, and **Next card** (**Enter**) loads the next one with HTMX. The answer isn't in the page before then.
 - Each card appears once per session. A missed card goes back to box 1 and comes back tomorrow.
 - When nothing is due, **Study anyway** starts an extra-practice session of up to 20 cards, soonest due first. These answers move cards between boxes like any other.
 - The session ends by itself when the cards run out, or with **End session**, and shows a summary: cards reviewed, % correct, cards moved up or back to box 1, and when the next card is due.
@@ -221,6 +223,27 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps -v ./backups:/backu
   -xzf /backups/parchment-media-<time>.tar.gz -C /app/media
 ```
 
+### Free hosting (Render and Supabase)
+
+For a free demo with no payment method, the app runs on [Render](https://render.com)'s free web service and the database on [Supabase](https://supabase.com)'s free PostgreSQL. `render.yaml` describes the service: it builds `Dockerfile.slim` from the `deployment` branch and redeploys on every push there.
+
+The free service has 512 MB of memory, so the slim image leaves out PyTorch and the embedding model (concepts are grouped with TF-IDF) and runs one web process with the background worker beside it (`RUN_WORKER=1`). Processing a 1 MB PDF peaks at about 330 MB.
+
+1. **Database.** Create a free Supabase project (turn off the Data API, which Parchment doesn't use). Under **Connect → Direct → Session pooler**, copy the URI and put the database password in it. The direct connection needs IPv6, which Render lacks.
+2. **Render.** Sign up at render.com with GitHub and allow access to this repository. Choose **New → Blueprint**, pick the repository and the `deployment` branch, and fill in:
+   - `DATABASE_URL`: the Supabase connection string
+   - `GEMINI_API_KEY`: optional; a free key from aistudio.google.com writes much better cards
+   `DJANGO_SECRET_KEY` is generated for you. Click **Deploy Blueprint**; the first build takes about 5 minutes.
+3. Open the service's `https://<name>.onrender.com` address. Render sets `RENDER_EXTERNAL_HOSTNAME`, which the production settings trust, so `DJANGO_ALLOWED_HOSTS` isn't needed.
+
+Limits of the free tier:
+
+- The service sleeps after 15 minutes without visitors; the next visit wakes it in about a minute. Supabase pauses a project after a week of inactivity (resume it from its dashboard).
+- The disk is wiped on every deploy and restart, so uploaded PDFs disappear. Courses, extracted text and flashcards are in the database and stay; only the link to the original PDF breaks.
+- PDFs are limited to 100 pages (`MATERIAL_MAX_PDF_PAGES`) to stay within memory.
+- Password reset emails need `EMAIL_URL` (see Configuration), e.g. `smtp+tls://you@gmail.com:<app password>@smtp.gmail.com:587`.
+- To create an admin account, run `python manage.py createsuperuser` on your own machine with `DATABASE_URL` pointed at Supabase.
+
 ## Security
 
 - Every page, API endpoint and file download checks that the object belongs to the signed-in user; a test visits every URL that takes an id as another user and expects a 404.
@@ -251,6 +274,7 @@ All settings come from environment variables (see `.env.example`):
 | `ANTHROPIC_API_KEY` | — | Paid; lets Claude write the flashcards |
 | `CARD_GENERATOR` | `auto` | `auto` (Gemini if key set, else Claude, else rules), `gemini`, `claude` or `rules` |
 | `CARD_GENERATION_GEMINI_MODEL` | `gemini-flash-latest` | Gemini model for card writing |
+| `ANSWER_GRADER` | `auto` | Checks typed answers while studying: `auto` (Gemini or Claude, as above), `gemini`, `claude` or `local` (key-word comparison) |
 | `CARD_GENERATION_MODEL` | `claude-opus-5` | Claude model for card writing |
 | `CARD_GENERATION_EFFORT` | `medium` | `low`, `medium` or `high`: how much Claude thinks per request |
 | `EMBEDDING_BACKEND` | `auto` | `auto`, `sentence-transformers` or `tfidf` |

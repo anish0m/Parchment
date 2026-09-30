@@ -1,0 +1,33 @@
+# Render Blueprint: the free web service, built from the deployment branch.
+# The database is external (e.g. Supabase); see "Free hosting" in the README.
+services:
+  - type: web
+    name: parchment
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: deployment
+    dockerfilePath: ./Dockerfile.slim
+    healthCheckPath: /healthz/
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # One process each for the web server and the background worker, to fit
+      # in 512 MB. The worker checks the queue once a second.
+      - key: RUN_WORKER
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_CMD_ARGS
+        value: "--threads 4"
+      - key: Q_WORKERS
+        value: "1"
+      - key: Q_POLL
+        value: "1"
+      - key: MATERIAL_MAX_PDF_PAGES
+        value: "100"
