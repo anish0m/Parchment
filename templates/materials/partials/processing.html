@@ -8,19 +8,15 @@ is being processed it asks the server for an update every 2 seconds.
   <div class="modal-head">
     <div>
       {% if material.status == "ready" %}
-        <div class="processing-icon done" aria-hidden="true">✓</div>
         <div class="eyebrow">Material ready</div>
         <h2>Your flashcards are ready.</h2>
       {% elif material.status == "failed" %}
-        <div class="processing-icon failed" aria-hidden="true">!</div>
         <div class="eyebrow">Material processing</div>
         <h2>{% if material.raw_text %}We couldn't generate flashcards.{% else %}We couldn't read this material.{% endif %}</h2>
       {% elif stalled %}
-        <div class="processing-icon failed" aria-hidden="true">!</div>
         <div class="eyebrow">Material processing</div>
         <h2>This is taking longer than expected.</h2>
       {% else %}
-        <div class="processing-icon spinning" aria-hidden="true"><span>↻</span></div>
         <div class="eyebrow">Material processing</div>
         <h2>We're preparing your material.</h2>
       {% endif %}
